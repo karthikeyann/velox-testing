@@ -42,7 +42,11 @@ class DeviceType(str, Enum):
     CPU = "CPU"
     GPU = "GPU"
     NIC = "NIC"
+    NVME = "NVMe"
+    ETHERNET = "Ethernet"
     PCIE_SWITCH = "PCIe Switch"
+    PCIE_BRIDGE = "PCIe Bridge"
+    MEMORY = "Memory"
 
 
 class SystemType(str, Enum):
@@ -284,6 +288,160 @@ def collect_lspci_names() -> dict[str, str]:
     return result
 
 
+INTERESTING_CLASSES = {
+    "0108": DeviceType.NVME,
+    "0200": DeviceType.ETHERNET,
+    "0207": DeviceType.NIC,
+    "0302": DeviceType.GPU,
+    "0300": DeviceType.GPU,
+}
+
+SKIP_VENDORS = {"1a03"}  # ASPEED BMC graphics
+
+
+@dataclass
+class PcieTreeNode:
+    """A node in the PCIe device tree."""
+    bdf: str
+    name: str
+    product: str
+    device_type: Optional[DeviceType]
+    numa_node: int
+    pcie_link: dict
+    children: list[PcieTreeNode] = field(default_factory=list)
+    is_bridge: bool = False
+    is_interesting: bool = False
+
+
+def collect_pcie_tree() -> dict[str, list[PcieTreeNode]]:
+    """Build PCIe device tree from sysfs, pruned to interesting devices.
+
+    Returns {root_complex_bdf: [top-level PcieTreeNode children]}.
+    Each root complex represents a CPU root port.
+    """
+    lspci_raw = _run("lspci -n")
+    bdf_class: dict[str, str] = {}
+    bdf_vendor: dict[str, str] = {}
+    for line in lspci_raw.splitlines():
+        m = re.match(r"(\S+)\s+(\S+):\s+(\S+)", line)
+        if m:
+            full_bdf = f"0000:{m.group(1)}"
+            bdf_class[full_bdf] = m.group(2)
+            vendor = m.group(3).split(":")[0] if ":" in m.group(3) else ""
+            bdf_vendor[full_bdf] = vendor
+
+    lspci_names = collect_lspci_names()
+
+    interesting_bdfs: set[str] = set()
+    seen_base: set[str] = set()
+    for bdf in sorted(bdf_class.keys()):
+        cls = bdf_class[bdf]
+        cls_short = cls[:4]
+        if cls_short not in INTERESTING_CLASSES:
+            continue
+        vendor = bdf_vendor.get(bdf, "")
+        if vendor in SKIP_VENDORS:
+            continue
+        base_bdf = bdf.rsplit(".", 1)[0]
+        if base_bdf in seen_base:
+            continue
+        seen_base.add(base_bdf)
+        interesting_bdfs.add(bdf)
+
+    chains: list[list[str]] = []
+    for bdf in sorted(interesting_bdfs):
+        sysfs_path = Path(f"/sys/bus/pci/devices/{bdf}")
+        if not sysfs_path.exists():
+            continue
+        try:
+            real_path = sysfs_path.resolve()
+        except OSError:
+            continue
+        parts = str(real_path).split("/")
+        chain = [p for p in parts if re.match(r"(pci)?[0-9a-f]{4}:[0-9a-f]{2}", p)]
+        normalized: list[str] = []
+        for p in chain:
+            if p.startswith("pci"):
+                domain_bus = p[3:]
+                normalized.append(f"{domain_bus}:00.0")
+            elif re.match(r"[0-9a-f]{4}:[0-9a-f]{2}:[0-9a-f]{2}\.[0-9a-f]", p):
+                normalized.append(p)
+        if normalized:
+            chains.append(normalized)
+
+    tree: dict[str, dict] = {}
+    for chain in chains:
+        root = chain[0] if chain else "unknown"
+        node = tree.setdefault(root, {})
+        for bdf in chain[1:]:
+            node = node.setdefault(bdf, {})
+
+    def _build_nodes(subtree: dict, parent_bdf: str) -> list[PcieTreeNode]:
+        nodes: list[PcieTreeNode] = []
+        for bdf, children_dict in subtree.items():
+            cls = bdf_class.get(bdf, "")
+            cls_short = cls[:4] if cls else ""
+            dtype = INTERESTING_CLASSES.get(cls_short)
+            is_bridge = cls_short == "0604"
+            is_interesting = bdf in interesting_bdfs
+
+            raw_name = lspci_names.get(bdf, "")
+            product = raw_name if raw_name else ""
+            lspci_desc = ""
+            if not product:
+                short_bdf = bdf.replace("0000:", "")
+                lspci_desc = _run(f"lspci -s {short_bdf}").strip()
+                if lspci_desc and " " in lspci_desc:
+                    lspci_desc = lspci_desc.split(" ", 1)[1]
+
+            display_name = product or lspci_desc or bdf
+
+            numa = -1
+            try:
+                with open(f"/sys/bus/pci/devices/{bdf}/numa_node") as f:
+                    val = int(f.read().strip())
+                    if val >= 0:
+                        numa = val
+            except (OSError, ValueError):
+                pass
+
+            pcie_link = collect_pcie_link(bdf) if (bdf in interesting_bdfs or is_bridge) else {}
+
+            child_nodes = _build_nodes(children_dict, bdf)
+            interesting_below = is_interesting or any(
+                c.is_interesting or c.children for c in child_nodes
+            )
+
+            if not interesting_below and not is_interesting:
+                continue
+
+            if not is_interesting and len(child_nodes) == 1 and not is_bridge:
+                nodes.extend(child_nodes)
+                continue
+
+            node = PcieTreeNode(
+                bdf=bdf,
+                name=display_name,
+                product=product,
+                device_type=dtype if is_interesting else DeviceType.PCIE_BRIDGE,
+                numa_node=numa,
+                pcie_link=pcie_link,
+                children=child_nodes,
+                is_bridge=not is_interesting,
+                is_interesting=is_interesting,
+            )
+            nodes.append(node)
+        return nodes
+
+    result: dict[str, list[PcieTreeNode]] = {}
+    for root_bdf, subtree in tree.items():
+        nodes = _build_nodes(subtree, root_bdf)
+        if nodes:
+            result[root_bdf] = nodes
+
+    return result
+
+
 def _extract_product_name(lspci_desc: str) -> str:
     """Extract a concise product name from an lspci description line.
 
@@ -314,6 +472,19 @@ def _extract_product_name(lspci_desc: str) -> str:
 
     after_colon = lspci_desc.split(":", 1)[-1].strip() if ":" in lspci_desc else lspci_desc
     after_colon = re.sub(r"\(rev [0-9a-f]+\)", "", after_colon).strip()
+
+    for kw in ("NVMe SSD", "NVMe", "SSD"):
+        if kw in after_colon:
+            cleaned = re.sub(r"\s+", " ", after_colon).strip()
+            tokens = cleaned.split()
+            if len(tokens) > 5:
+                return " ".join(tokens[:5])
+            return cleaned
+
+    if "Ethernet Controller" in after_colon or "Ethernet" in after_colon:
+        cleaned = re.sub(r"\s+", " ", after_colon).strip()
+        return cleaned
+
     tokens = after_colon.split()
     if len(tokens) > 4:
         return " ".join(tokens[:4])
@@ -432,27 +603,6 @@ def detect_system_type(cpu_arch: str, connections: dict, gpu_names: list[str]) -
     return SystemType.X86_DISCRETE
 
 
-class _UnionFind:
-    """Simple union-find for merging PCIe switch groups."""
-
-    def __init__(self) -> None:
-        self._parent: dict[str, str] = {}
-
-    def find(self, x: str) -> str:
-        self._parent.setdefault(x, x)
-        while self._parent[x] != x:
-            self._parent[x] = self._parent[self._parent[x]]
-            x = self._parent[x]
-        return x
-
-    def union(self, a: str, b: str) -> None:
-        ra, rb = self.find(a), self.find(b)
-        if ra != rb:
-            if ra > rb:
-                ra, rb = rb, ra
-            self._parent[rb] = ra
-
-
 def build_topology(verbose: bool = False) -> Topology:
     topo = Topology()
 
@@ -568,35 +718,17 @@ def build_topology(verbose: bool = False) -> Topology:
             },
         ))
 
-    # Build PCIe switch groups using union-find over PIX connections between NICs
-    uf = _UnionFind()
-    for (row, col), conn in connections.items():
-        if conn == "PIX" and row.startswith("NIC") and col.startswith("NIC"):
-            uf.union(row, col)
-
-    pix_groups: dict[str, set[str]] = defaultdict(set)
-    all_pix_nics = {
-        n
-        for (a, b), c in connections.items()
-        if c == "PIX"
-        for n in (a, b)
-        if n.startswith("NIC")
-    }
-    for nic in all_pix_nics:
-        root = uf.find(nic)
-        pix_groups[root].add(nic)
-
+    # NVLink connections from nvidia-smi topo matrix
     seen_links: set[tuple[str, str]] = set()
-
     for (row, col), conn in connections.items():
         if row == col or conn == "X":
             continue
         key = tuple(sorted([row, col]))
         if key in seen_links:
             continue
-        seen_links.add(key)
 
         if re.match(r"NV\d+", conn):
+            seen_links.add(key)
             num_links = int(conn[2:])
             src_idx = int(row.replace("GPU", "")) if row.startswith("GPU") else -1
             per_link = 0.0
@@ -610,60 +742,149 @@ def build_topology(verbose: bool = False) -> Topology:
             ))
 
         elif conn == "C2C":
+            seen_links.add(key)
             topo.links.append(Link(
                 src=row, dst=col,
                 link_type="NVLink-C2C",
                 bw_gbps=C2C_BW_GBPS,
             ))
 
-        elif conn == "PIX":
-            if not (row.startswith("NIC") and col.startswith("NIC")):
+    # PCIe tree from sysfs: NVMe, bridges, physical hierarchy
+    pcie_tree = collect_pcie_tree()
+    if verbose:
+        topo.raw["pcie_tree_roots"] = list(pcie_tree.keys())
+
+    def _norm_bdf(bdf: str) -> str:
+        """Normalize BDF to 0000:xx:xx.x lowercase format."""
+        bdf = bdf.lower().strip()
+        if re.match(r"[0-9a-f]{8}:", bdf):
+            bdf = "0000:" + bdf[9:]
+        if not bdf.startswith("0000:"):
+            bdf = "0000:" + bdf
+        return bdf
+
+    gpu_bdf_to_name = {_norm_bdf(d.pci_bdf): d.name for d in topo.devices if d.device_type == DeviceType.GPU and d.pci_bdf}
+    nic_bdf_to_name = {_norm_bdf(d.pci_bdf): d.name for d in topo.devices if d.device_type == DeviceType.NIC and d.pci_bdf}
+    existing_bdfs = gpu_bdf_to_name | nic_bdf_to_name
+
+    bdf_to_topo_name: dict[str, str] = dict(existing_bdfs)
+    nvme_counter = 0
+    eth_counter = 0
+    bridge_counter = 0
+
+    def _flatten_tree(nodes: list[PcieTreeNode], parent_name: str) -> None:
+        nonlocal nvme_counter, eth_counter, bridge_counter
+        for node in nodes:
+            if node.bdf in bdf_to_topo_name:
+                this_name = bdf_to_topo_name[node.bdf]
+            elif node.is_interesting:
+                if node.device_type == DeviceType.NVME:
+                    this_name = f"NVMe{nvme_counter}"
+                    nvme_counter += 1
+                    topo.devices.append(Device(
+                        name=this_name,
+                        device_type=DeviceType.NVME,
+                        pci_bdf=node.bdf,
+                        numa_node=node.numa_node,
+                        details={
+                            "product": node.product or node.name,
+                            "pcie": node.pcie_link,
+                        },
+                    ))
+                elif node.device_type == DeviceType.ETHERNET:
+                    this_name = f"ETH{eth_counter}"
+                    eth_counter += 1
+                    topo.devices.append(Device(
+                        name=this_name,
+                        device_type=DeviceType.ETHERNET,
+                        pci_bdf=node.bdf,
+                        numa_node=node.numa_node,
+                        details={
+                            "product": node.product or node.name,
+                            "pcie": node.pcie_link,
+                        },
+                    ))
+                else:
+                    this_name = node.bdf
+                    topo.devices.append(Device(
+                        name=this_name,
+                        device_type=node.device_type or DeviceType.PCIE_BRIDGE,
+                        pci_bdf=node.bdf,
+                        numa_node=node.numa_node,
+                        details={"product": node.product or node.name},
+                    ))
+                bdf_to_topo_name[node.bdf] = this_name
+            elif node.is_bridge and len(node.children) >= 2:
+                this_name = f"Bridge{bridge_counter}"
+                bridge_counter += 1
+                short_name = node.product or node.name
+                if len(short_name) > 40:
+                    short_name = short_name[:37] + "..."
+                topo.devices.append(Device(
+                    name=this_name,
+                    device_type=DeviceType.PCIE_BRIDGE,
+                    pci_bdf=node.bdf,
+                    numa_node=node.numa_node,
+                    details={"product": short_name},
+                ))
+                bdf_to_topo_name[node.bdf] = this_name
+            else:
+                _flatten_tree(node.children, parent_name)
+                continue
+
+            this_name = bdf_to_topo_name[node.bdf]
+            pcie_info = node.pcie_link
+            bw = pcie_info.get("bw_bidi_gbps", 0) if pcie_info else 0
+            label = pcie_info.get("label", "PCIe") if pcie_info else "PCIe"
+            if parent_name:
                 topo.links.append(Link(
-                    src=row, dst=col,
-                    link_type="PCIe Switch",
-                    bw_gbps=0,
+                    src=parent_name, dst=this_name,
+                    link_type=label,
+                    bw_gbps=bw,
                 ))
 
-        elif conn == "PXB":
-            src_dev = _find_device(topo, row)
-            pcie_info = src_dev.details.get("pcie", {}) if src_dev else {}
-            bw = pcie_info.get("bw_bidi_gbps", 0)
-            label = pcie_info.get("label", "PCIe")
-            topo.links.append(Link(
-                src=row, dst=col,
-                link_type=label,
-                bw_gbps=bw,
-            ))
+            _flatten_tree(node.children, this_name)
 
-        elif conn == "PHB":
-            src_dev = _find_device(topo, row)
-            pcie_info = src_dev.details.get("pcie", {}) if src_dev else {}
-            bw = pcie_info.get("bw_bidi_gbps", 0)
-            label = pcie_info.get("label", "PCIe Host Bridge")
-            topo.links.append(Link(
-                src=row, dst=col,
-                link_type=label,
-                bw_gbps=bw,
-            ))
+    numa_to_root: dict[int, set[str]] = defaultdict(set)
+    for root_bdf, nodes in pcie_tree.items():
+        for node in nodes:
+            numa = node.numa_node
+            if numa < 0:
+                def _find_numa(n: PcieTreeNode) -> int:
+                    if n.numa_node >= 0:
+                        return n.numa_node
+                    for c in n.children:
+                        r = _find_numa(c)
+                        if r >= 0:
+                            return r
+                    return -1
+                numa = _find_numa(node)
+            if numa >= 0:
+                numa_to_root[numa].add(root_bdf)
 
-    # Create PCIe switch devices and links from merged PIX groups
-    for root, members in pix_groups.items():
-        sw_name = f"PCIeSW_{root}"
-        first_member = sorted(members)[0]
-        sw_numa = -1
-        first_dev = _find_device(topo, first_member)
-        if first_dev:
-            sw_numa = first_dev.numa_node
-        topo.devices.append(Device(
-            name=sw_name,
-            device_type=DeviceType.PCIE_SWITCH,
-            numa_node=sw_numa,
-            details={"members": sorted(members)},
-        ))
-        for nic in sorted(members):
+    for root_bdf, nodes in pcie_tree.items():
+        cpu_name = None
+        for numa_id, roots in numa_to_root.items():
+            if root_bdf in roots:
+                cpu_name = f"CPU{numa_id}"
+                break
+        _flatten_tree(nodes, cpu_name or "")
+
+    # Memory devices
+    for nid, info in numa_info.get("nodes", {}).items():
+        size_mb = info.get("size_mb", 0)
+        size_gb = round(size_mb / 1024, 1)
+        if size_gb > 0:
+            mem_name = f"MEM{nid}"
+            topo.devices.append(Device(
+                name=mem_name,
+                device_type=DeviceType.MEMORY,
+                numa_node=nid,
+                details={"size_gb": size_gb},
+            ))
             topo.links.append(Link(
-                src=sw_name, dst=nic,
-                link_type="PCIe Switch",
+                src=f"CPU{nid}", dst=mem_name,
+                link_type="DDR5",
                 bw_gbps=0,
             ))
 
@@ -674,20 +895,6 @@ def build_topology(verbose: bool = False) -> Topology:
             link_type="UPI",
             bw_gbps=82.0,
         ))
-
-    # CPU-to-GPU PCIe links (x86 discrete)
-    if topo.system_type == SystemType.X86_DISCRETE:
-        for dev in topo.devices:
-            if dev.device_type == DeviceType.GPU and dev.numa_node >= 0:
-                cpu_name = f"CPU{dev.numa_node}"
-                pcie_info = dev.details.get("pcie", {})
-                bw = pcie_info.get("bw_bidi_gbps", 0)
-                label = pcie_info.get("label", "PCIe")
-                topo.links.append(Link(
-                    src=cpu_name, dst=dev.name,
-                    link_type=label,
-                    bw_gbps=bw,
-                ))
 
     return topo
 
@@ -754,15 +961,19 @@ DOT_COLORS = {
     DeviceType.CPU: "#3B7DD8",
     DeviceType.GPU: "#5DA845",
     DeviceType.NIC: "#D98C21",
+    DeviceType.NVME: "#E67E22",
+    DeviceType.ETHERNET: "#1ABC9C",
     DeviceType.PCIE_SWITCH: "#8E44AD",
+    DeviceType.PCIE_BRIDGE: "#8E44AD",
+    DeviceType.MEMORY: "#2980B9",
 }
 
 LINK_COLORS = {
-    "NVLink": "#2ECC71",
     "NVLink-C2C": "#E74C3C",
+    "NVLink": "#2ECC71",
     "PCIe": "#3498DB",
     "UPI": "#E74C3C",
-    "PCIe Switch": "#9B59B6",
+    "DDR": "#2980B9",
 }
 
 
@@ -818,6 +1029,14 @@ def export_dot(topo: Topology, path: Path) -> None:
                 detail = f"\\n{d.details.get('model', '')}"
             elif d.device_type == DeviceType.NIC:
                 detail = _nic_detail_label(d, sep="\\n")
+            elif d.device_type == DeviceType.NVME:
+                detail = f"\\n{d.details.get('product', '')}"
+            elif d.device_type == DeviceType.ETHERNET:
+                detail = f"\\n{d.details.get('product', '')}"
+            elif d.device_type == DeviceType.PCIE_BRIDGE:
+                detail = f"\\n{d.details.get('product', '')}"
+            elif d.device_type == DeviceType.MEMORY:
+                detail = f"\\n{d.details.get('size_gb', '')} GB"
             lines.append(
                 f'    {nid} [label="{d.name}{detail}", '
                 f'fillcolor="{color}", fontcolor="white"];'
@@ -865,11 +1084,11 @@ def export_dot(topo: Topology, path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 MERMAID_LINK_STYLES = {
-    "NVLink": "stroke:#2ECC71,stroke-width:3px",
     "NVLink-C2C": "stroke:#E74C3C,stroke-width:3px",
+    "NVLink": "stroke:#2ECC71,stroke-width:3px",
     "PCIe": "stroke:#3498DB,stroke-width:2px",
     "UPI": "stroke:#E74C3C,stroke-width:2px,stroke-dasharray:5 5",
-    "PCIe Switch": "stroke:#9B59B6,stroke-width:2px",
+    "DDR": "stroke:#2980B9,stroke-width:2px,stroke-dasharray:3 3",
 }
 
 
@@ -943,16 +1162,24 @@ def export_mermaid(topo: Topology, path: Path) -> None:
     lines.append("    classDef cpuNode fill:#3B7DD8,stroke:#2C5F9E,color:#fff")
     lines.append("    classDef gpuNode fill:#5DA845,stroke:#468033,color:#fff")
     lines.append("    classDef nicNode fill:#D98C21,stroke:#B07019,color:#fff")
-    lines.append("    classDef swNode fill:#8E44AD,stroke:#6C3483,color:#fff")
+    lines.append("    classDef nvmeNode fill:#E67E22,stroke:#C0651E,color:#fff")
+    lines.append("    classDef ethNode fill:#1ABC9C,stroke:#16A085,color:#fff")
+    lines.append("    classDef bridgeNode fill:#8E44AD,stroke:#6C3483,color:#fff")
+    lines.append("    classDef memNode fill:#2980B9,stroke:#1F6391,color:#fff")
 
+    cls_map = {
+        DeviceType.CPU: "cpuNode",
+        DeviceType.GPU: "gpuNode",
+        DeviceType.NIC: "nicNode",
+        DeviceType.NVME: "nvmeNode",
+        DeviceType.ETHERNET: "ethNode",
+        DeviceType.PCIE_SWITCH: "bridgeNode",
+        DeviceType.PCIE_BRIDGE: "bridgeNode",
+        DeviceType.MEMORY: "memNode",
+    }
     for d in topo.devices:
         nid = _mermaid_node_id(d.name)
-        cls = {
-            DeviceType.CPU: "cpuNode",
-            DeviceType.GPU: "gpuNode",
-            DeviceType.NIC: "nicNode",
-            DeviceType.PCIE_SWITCH: "swNode",
-        }.get(d.device_type, "")
+        cls = cls_map.get(d.device_type, "")
         if cls:
             lines.append(f"    class {nid} {cls}")
 
@@ -971,6 +1198,23 @@ def _mermaid_node_label(d: Device) -> str:
         return f"{d.name}<br/>{model}"
     if d.device_type == DeviceType.NIC:
         return f"{d.name}{_nic_detail_label(d, sep='<br/>')}"
+    if d.device_type == DeviceType.NVME:
+        product = d.details.get("product", "")
+        if len(product) > 35:
+            product = product[:32] + "..."
+        return f"{d.name}<br/>{product}"
+    if d.device_type == DeviceType.ETHERNET:
+        product = d.details.get("product", "")
+        if len(product) > 35:
+            product = product[:32] + "..."
+        return f"{d.name}<br/>{product}"
+    if d.device_type == DeviceType.PCIE_BRIDGE:
+        product = d.details.get("product", "")
+        if len(product) > 35:
+            product = product[:32] + "..."
+        return f"{d.name}<br/>{product}"
+    if d.device_type == DeviceType.MEMORY:
+        return f"{d.name}<br/>{d.details.get('size_gb', '')} GB"
     if d.device_type == DeviceType.PCIE_SWITCH:
         members = d.details.get("members", [])
         return f"{d.name}<br/>({', '.join(members)})"
@@ -979,14 +1223,16 @@ def _mermaid_node_label(d: Device) -> str:
 
 def _mermaid_node_shape(d: Device) -> tuple[str, str]:
     """Return (open_bracket, close_bracket) for the mermaid node shape."""
-    if d.device_type == DeviceType.CPU:
+    if d.device_type in (DeviceType.CPU, DeviceType.GPU):
         return ("[", "]")
-    if d.device_type == DeviceType.GPU:
-        return ("[", "]")
-    if d.device_type == DeviceType.NIC:
+    if d.device_type in (DeviceType.NIC, DeviceType.ETHERNET):
         return ("([", "])")
-    if d.device_type == DeviceType.PCIE_SWITCH:
+    if d.device_type in (DeviceType.PCIE_SWITCH, DeviceType.PCIE_BRIDGE):
         return ("{{", "}}")
+    if d.device_type == DeviceType.NVME:
+        return ("[(", ")]")
+    if d.device_type == DeviceType.MEMORY:
+        return ("[(", ")]")
     return ("[", "]")
 
 
@@ -1015,7 +1261,11 @@ def render_matplotlib(topo: Topology, path: Path) -> None:
             DeviceType.CPU: "#3B7DD8",
             DeviceType.GPU: "#5DA845",
             DeviceType.NIC: "#D98C21",
+            DeviceType.NVME: "#E67E22",
+            DeviceType.ETHERNET: "#1ABC9C",
             DeviceType.PCIE_SWITCH: "#8E44AD",
+            DeviceType.PCIE_BRIDGE: "#8E44AD",
+            DeviceType.MEMORY: "#2980B9",
         }
         node_colors[d.name] = color_map.get(d.device_type, "#BDC3C7")
         if d.device_type == DeviceType.GPU:
@@ -1028,6 +1278,23 @@ def render_matplotlib(topo: Topology, path: Path) -> None:
             node_labels[d.name] = f"{d.name}\n{short_model}"
         elif d.device_type == DeviceType.NIC:
             node_labels[d.name] = f"{d.name}{_nic_detail_label(d)}"
+        elif d.device_type == DeviceType.NVME:
+            product = d.details.get("product", "")
+            if len(product) > 25:
+                product = product[:22] + "..."
+            node_labels[d.name] = f"{d.name}\n{product}"
+        elif d.device_type == DeviceType.ETHERNET:
+            product = d.details.get("product", "")
+            if len(product) > 25:
+                product = product[:22] + "..."
+            node_labels[d.name] = f"{d.name}\n{product}"
+        elif d.device_type == DeviceType.PCIE_BRIDGE:
+            product = d.details.get("product", "")
+            if len(product) > 25:
+                product = product[:22] + "..."
+            node_labels[d.name] = f"{d.name}\n{product}"
+        elif d.device_type == DeviceType.MEMORY:
+            node_labels[d.name] = f"{d.name}\n{d.details.get('size_gb', '')} GB"
         else:
             node_labels[d.name] = d.name
 
@@ -1135,7 +1402,10 @@ def render_matplotlib(topo: Topology, path: Path) -> None:
         mpatches.Patch(color="#3B7DD8", label="CPU"),
         mpatches.Patch(color="#5DA845", label="GPU"),
         mpatches.Patch(color="#D98C21", label="NIC"),
-        mpatches.Patch(color="#8E44AD", label="PCIe Switch"),
+        mpatches.Patch(color="#E67E22", label="NVMe"),
+        mpatches.Patch(color="#1ABC9C", label="Ethernet"),
+        mpatches.Patch(color="#8E44AD", label="PCIe Bridge"),
+        mpatches.Patch(color="#2980B9", label="Memory"),
     ]
     ax.legend(handles=legend_handles, loc="upper left", fontsize=9, framealpha=0.9)
 
@@ -1170,7 +1440,9 @@ def _compute_layout(topo: Topology, G: nx.Graph) -> dict[str, tuple[float, float
         groups = by_numa[numa_id]
 
         row = 0
-        for dtype_key in ["CPU", "GPU", "NIC", "PCIe Switch"]:
+        type_order = ["CPU", "Memory", "PCIe Bridge", "GPU", "NIC",
+                      "NVMe", "Ethernet", "PCIe Switch"]
+        for dtype_key in type_order:
             devs = groups.get(dtype_key, [])
             if not devs:
                 continue
