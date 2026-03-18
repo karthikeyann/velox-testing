@@ -244,6 +244,82 @@ def collect_ibstat() -> dict[str, dict]:
     return result
 
 
+def collect_rdma_bdf_map() -> dict[str, str]:
+    """Map RDMA/IB device names (mlx5_X) to PCIe BDFs via sysfs."""
+    result: dict[str, str] = {}
+    ib_dir = Path("/sys/class/infiniband")
+    if not ib_dir.exists():
+        return result
+    for dev_path in ib_dir.iterdir():
+        name = dev_path.name
+        device_link = dev_path / "device"
+        if device_link.exists():
+            try:
+                bdf = device_link.resolve().name
+                result[name] = bdf
+            except OSError:
+                pass
+    return result
+
+
+def collect_lspci_names() -> dict[str, str]:
+    """Map PCIe BDFs to human-readable device names from lspci.
+
+    Returns {bdf_with_domain: short_product_name}, e.g.
+    {"0000:05:00.0": "ConnectX-7"}.
+    """
+    raw = _run("lspci")
+    result: dict[str, str] = {}
+    for line in raw.splitlines():
+        m = re.match(r"(\S+)\s+(.+)", line)
+        if not m:
+            continue
+        short_bdf = m.group(1)
+        description = m.group(2)
+        full_bdf = f"0000:{short_bdf}"
+
+        product = _extract_product_name(description)
+        if product:
+            result[full_bdf] = product
+    return result
+
+
+def _extract_product_name(lspci_desc: str) -> str:
+    """Extract a concise product name from an lspci description line.
+
+    Examples:
+      "Infiniband controller: Mellanox Technologies MT2910 Family [ConnectX-7]"
+        -> "ConnectX-7"
+      "Mellanox Technologies MT43244 BlueField-3 integrated ConnectX-7 network controller"
+        -> "BlueField-3 ConnectX-7"
+      "3D controller: NVIDIA Corporation Device 2901 (rev a1)"
+        -> "NVIDIA Device 2901"
+    """
+    bracket = re.search(r"\[([^\]]+)\]", lspci_desc)
+    if bracket:
+        return bracket.group(1)
+
+    if "BlueField" in lspci_desc:
+        m = re.search(r"(BlueField-\d+)\s+.*?(ConnectX-\d+)", lspci_desc)
+        if m:
+            return f"{m.group(1)} {m.group(2)}"
+        m = re.search(r"(BlueField-\d+)", lspci_desc)
+        if m:
+            return m.group(1)
+
+    if "ConnectX" in lspci_desc:
+        m = re.search(r"(ConnectX-\d+)", lspci_desc)
+        if m:
+            return m.group(1)
+
+    after_colon = lspci_desc.split(":", 1)[-1].strip() if ":" in lspci_desc else lspci_desc
+    after_colon = re.sub(r"\(rev [0-9a-f]+\)", "", after_colon).strip()
+    tokens = after_colon.split()
+    if len(tokens) > 4:
+        return " ".join(tokens[:4])
+    return after_colon
+
+
 # ---------------------------------------------------------------------------
 # Parser: build Topology from raw data
 # ---------------------------------------------------------------------------
@@ -405,6 +481,12 @@ def build_topology(verbose: bool = False) -> Topology:
     if verbose:
         topo.raw["ibstat"] = ibstat_info
 
+    rdma_bdf_map = collect_rdma_bdf_map()
+    lspci_names = collect_lspci_names()
+    if verbose:
+        topo.raw["rdma_bdf_map"] = rdma_bdf_map
+        topo.raw["lspci_names"] = lspci_names
+
     header_names, connections, numa_map = parse_topo_matrix(raw_topo)
     nic_legend = _parse_nic_legend(raw_topo)
     gpu_names_in_topo = [h for h in header_names if h.startswith("GPU")]
@@ -468,15 +550,21 @@ def build_topology(verbose: bool = False) -> Topology:
         if numa < 0:
             numa = _infer_nic_numa(nic_label)
         ib_info = ibstat_info.get(mlx_name, {})
+        nic_bdf = rdma_bdf_map.get(mlx_name, "")
+        nic_product = lspci_names.get(nic_bdf, "")
+        nic_pcie = collect_pcie_link(nic_bdf) if nic_bdf else {}
         topo.devices.append(Device(
             name=nic_label,
             device_type=DeviceType.NIC,
+            pci_bdf=nic_bdf,
             numa_node=numa,
             details={
                 "mlx_name": mlx_name,
+                "product": nic_product,
                 "rate_gbps": ib_info.get("rate_gbps", 0),
                 "state": ib_info.get("state", "Unknown"),
                 "link_layer": ib_info.get("link_layer", "Unknown"),
+                "pcie": nic_pcie,
             },
         ))
 
@@ -650,6 +738,18 @@ def export_json(topo: Topology, path: Path) -> None:
 # DOT renderer
 # ---------------------------------------------------------------------------
 
+def _nic_detail_label(d: Device, sep: str = "\n") -> str:
+    """Build a multi-line detail string for a NIC device."""
+    product = d.details.get("product", "")
+    mlx = d.details.get("mlx_name", "")
+    parts = []
+    if product:
+        parts.append(product)
+    if mlx:
+        parts.append(mlx)
+    return (sep + sep.join(parts)) if parts else ""
+
+
 DOT_COLORS = {
     DeviceType.CPU: "#3B7DD8",
     DeviceType.GPU: "#5DA845",
@@ -717,7 +817,7 @@ def export_dot(topo: Topology, path: Path) -> None:
             elif d.device_type == DeviceType.CPU:
                 detail = f"\\n{d.details.get('model', '')}"
             elif d.device_type == DeviceType.NIC:
-                detail = f"\\n{d.details.get('mlx_name', '')}"
+                detail = _nic_detail_label(d, sep="\\n")
             lines.append(
                 f'    {nid} [label="{d.name}{detail}", '
                 f'fillcolor="{color}", fontcolor="white"];'
@@ -870,7 +970,7 @@ def _mermaid_node_label(d: Device) -> str:
             model = model[:27] + "..."
         return f"{d.name}<br/>{model}"
     if d.device_type == DeviceType.NIC:
-        return f"{d.name}<br/>{d.details.get('mlx_name', '')}"
+        return f"{d.name}{_nic_detail_label(d, sep='<br/>')}"
     if d.device_type == DeviceType.PCIE_SWITCH:
         members = d.details.get("members", [])
         return f"{d.name}<br/>({', '.join(members)})"
@@ -927,7 +1027,7 @@ def render_matplotlib(topo: Topology, path: Path) -> None:
                 short_model = short_model[:22] + "..."
             node_labels[d.name] = f"{d.name}\n{short_model}"
         elif d.device_type == DeviceType.NIC:
-            node_labels[d.name] = f"{d.name}\n{d.details.get('mlx_name', '')}"
+            node_labels[d.name] = f"{d.name}{_nic_detail_label(d)}"
         else:
             node_labels[d.name] = d.name
 
