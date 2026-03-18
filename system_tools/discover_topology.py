@@ -870,6 +870,38 @@ def build_topology(verbose: bool = False) -> Topology:
                 break
         _flatten_tree(nodes, cpu_name or "")
 
+    # Link multi-function NIC siblings to the same parent as function 0.
+    # nvidia-smi topo lists every mlx5 port (e.g. 05:00.0-3) as a separate
+    # NIC, but the PCIe tree only contains function 0 since all functions
+    # share the same physical slot.
+    linked_devices = {l.dst for l in topo.links} | {l.src for l in topo.links}
+    for dev in topo.devices:
+        if dev.name in linked_devices or not dev.pci_bdf:
+            continue
+        norm = _norm_bdf(dev.pci_bdf)
+        base = norm.rsplit(".", 1)[0]
+        fn0_bdf = f"{base}.0"
+        if fn0_bdf == norm:
+            continue
+        fn0_name = bdf_to_topo_name.get(fn0_bdf)
+        if not fn0_name:
+            continue
+        for link in topo.links:
+            if link.dst == fn0_name:
+                topo.links.append(Link(
+                    src=link.src, dst=dev.name,
+                    link_type=link.link_type,
+                    bw_gbps=link.bw_gbps,
+                ))
+                break
+            elif link.src == fn0_name:
+                topo.links.append(Link(
+                    src=link.dst, dst=dev.name,
+                    link_type=link.link_type,
+                    bw_gbps=link.bw_gbps,
+                ))
+                break
+
     # Memory devices
     for nid, info in numa_info.get("nodes", {}).items():
         size_mb = info.get("size_mb", 0)
