@@ -772,6 +772,31 @@ def build_topology(verbose: bool = False) -> Topology:
     eth_counter = 0
     bridge_counter = 0
 
+    def _find_root_port_link(bdf: str) -> dict:
+        """Walk sysfs path from *bdf* toward the root and return the link
+        speed of the root port (the first bridge directly under the root
+        complex).  This gives the actual physical uplink speed, which may
+        differ from an internal switch port's reported speed."""
+        sysfs = Path(f"/sys/bus/pci/devices/{bdf}")
+        try:
+            real = str(sysfs.resolve())
+        except OSError:
+            return {}
+        parts = real.split("/")
+        root_idx = None
+        for i, p in enumerate(parts):
+            if p.startswith("pci"):
+                root_idx = i
+                break
+        if root_idx is None:
+            return {}
+        first_bridge_bdf = parts[root_idx + 1] if root_idx + 1 < len(parts) else None
+        if first_bridge_bdf and re.match(
+            r"[0-9a-f]{4}:[0-9a-f]{2}:[0-9a-f]{2}\.[0-9a-f]", first_bridge_bdf
+        ):
+            return collect_pcie_link(first_bridge_bdf)
+        return {}
+
     def _flatten_tree(nodes: list[PcieTreeNode], parent_name: str) -> None:
         nonlocal nvme_counter, eth_counter, bridge_counter
         for node in nodes:
@@ -836,6 +861,13 @@ def build_topology(verbose: bool = False) -> Topology:
             pcie_info = node.pcie_link
             bw = pcie_info.get("bw_bidi_gbps", 0) if pcie_info else 0
             label = pcie_info.get("label", "PCIe") if pcie_info else "PCIe"
+
+            if parent_name and node.is_bridge and parent_name.startswith("CPU"):
+                upstream = _find_root_port_link(node.bdf)
+                if upstream:
+                    bw = upstream.get("bw_bidi_gbps", bw)
+                    label = upstream.get("label", label)
+
             if parent_name:
                 topo.links.append(Link(
                     src=parent_name, dst=this_name,
