@@ -53,6 +53,8 @@ class SystemType(str, Enum):
     X86_DISCRETE = "x86 + Discrete GPU"
     GRACE_HOPPER = "Grace Hopper (GH200)"
     GRACE_BLACKWELL = "Grace Blackwell (GB200)"
+    ARM_DISCRETE = "ARM + Discrete GPU"
+    UNKNOWN = "Unknown"
 
 
 TOPO_CONNECTION_TYPES = {
@@ -76,9 +78,9 @@ PCIE_SPEED_TABLE = {
     "32 GT/s": 3.938,
     "64.0 GT/s": 7.563,
     "64 GT/s": 7.563,
+    "128.0 GT/s": 15.125,
+    "128 GT/s": 15.125,
 }
-
-C2C_BW_GBPS = 900.0
 
 
 @dataclass
@@ -102,7 +104,7 @@ class Link:
 @dataclass
 class Topology:
     system_type: SystemType = SystemType.X86_DISCRETE
-    cpu_arch: str = "x86_64"
+    cpu_arch: str = "unknown"
     devices: list[Device] = field(default_factory=list)
     links: list[Link] = field(default_factory=list)
     raw: dict = field(default_factory=dict)
@@ -195,7 +197,7 @@ def _read_sysfs(path: str) -> str:
 
 
 def _pcie_gen(speed_key: str) -> str:
-    for prefix, gen in [("64", "5"), ("32", "5"), ("16", "4"), ("8", "3"), ("5", "2"), ("2.5", "1")]:
+    for prefix, gen in [("128", "6"), ("64", "5"), ("32", "5"), ("16", "4"), ("8", "3"), ("5", "2"), ("2.5", "1")]:
         if speed_key.startswith(prefix):
             return gen
     return ""
@@ -233,8 +235,10 @@ def collect_pcie_link(bdf: str) -> dict:
     except ValueError:
         mw = 0
 
-    use_max = max_per_lane * mw > cur_per_lane * cw and cur_per_lane <= PCIE_SPEED_TABLE.get("5 GT/s", 0.5)
-    if use_max and max_per_lane > 0:
+    cur_bw = cur_per_lane * cw
+    max_bw = max_per_lane * mw
+    use_max = max_bw > cur_bw and max_bw > 0
+    if use_max:
         speed_raw, speed_key, per_lane, width = max_speed, max_key, max_per_lane, mw
     else:
         speed_raw, speed_key, per_lane, width = cur_speed, cur_key, cur_per_lane, cw
@@ -324,7 +328,11 @@ INTERESTING_CLASSES = {
     "0300": DeviceType.GPU,
 }
 
-SKIP_VENDORS = {"1a03"}  # ASPEED BMC graphics
+SKIP_VENDORS = {
+    "1a03",  # ASPEED BMC graphics
+    "102b",  # Matrox G200 (server BMC)
+    "126f",  # SM750/SM768 (server BMC)
+}
 
 
 @dataclass
@@ -487,49 +495,21 @@ def collect_pcie_tree() -> dict[str, list[PcieTreeNode]]:
 def _extract_product_name(lspci_desc: str) -> str:
     """Extract a concise product name from an lspci description line.
 
-    Examples:
-      "Infiniband controller: Mellanox Technologies MT2910 Family [ConnectX-7]"
-        -> "ConnectX-7"
-      "Mellanox Technologies MT43244 BlueField-3 integrated ConnectX-7 network controller"
-        -> "BlueField-3 ConnectX-7"
-      "3D controller: NVIDIA Corporation Device 2901 (rev a1)"
-        -> "NVIDIA Device 2901"
+    Strategy:
+      1. Prefer text inside [...] brackets (lspci marketing name)
+      2. Otherwise strip the class prefix and (rev XX), return up to 6 tokens
     """
     bracket = re.search(r"\[([^\]]+)\]", lspci_desc)
     if bracket:
         return bracket.group(1)
 
-    if "BlueField" in lspci_desc:
-        m = re.search(r"(BlueField-\d+)\s+.*?(ConnectX-\d+)", lspci_desc)
-        if m:
-            return f"{m.group(1)} {m.group(2)}"
-        m = re.search(r"(BlueField-\d+)", lspci_desc)
-        if m:
-            return m.group(1)
-
-    if "ConnectX" in lspci_desc:
-        m = re.search(r"(ConnectX-\d+)", lspci_desc)
-        if m:
-            return m.group(1)
-
     after_colon = lspci_desc.split(":", 1)[-1].strip() if ":" in lspci_desc else lspci_desc
     after_colon = re.sub(r"\(rev [0-9a-f]+\)", "", after_colon).strip()
-
-    for kw in ("NVMe SSD", "NVMe", "SSD"):
-        if kw in after_colon:
-            cleaned = re.sub(r"\s+", " ", after_colon).strip()
-            tokens = cleaned.split()
-            if len(tokens) > 5:
-                return " ".join(tokens[:5])
-            return cleaned
-
-    if "Ethernet Controller" in after_colon or "Ethernet" in after_colon:
-        cleaned = re.sub(r"\s+", " ", after_colon).strip()
-        return cleaned
+    after_colon = re.sub(r"\s+", " ", after_colon).strip()
 
     tokens = after_colon.split()
-    if len(tokens) > 4:
-        return " ".join(tokens[:4])
+    if len(tokens) > 6:
+        return " ".join(tokens[:6])
     return after_colon
 
 
@@ -625,31 +605,39 @@ def _parse_nic_legend(raw_topo: str) -> dict[str, str]:
 
 def detect_system_type(cpu_arch: str, connections: dict, gpu_names: list[str]) -> SystemType:
     has_c2c = any(v == "C2C" for v in connections.values())
-    if cpu_arch == "aarch64":
-        if has_c2c:
-            cpu_names = set()
-            for (a, b), v in connections.items():
-                if v == "C2C":
-                    if a.startswith("CPU"):
-                        cpu_names.add(a)
-                    if b.startswith("CPU"):
-                        cpu_names.add(b)
-            if cpu_names:
-                ratio = len(gpu_names) / len(cpu_names) if cpu_names else 1
-                if ratio >= 2:
-                    return SystemType.GRACE_BLACKWELL
-            return SystemType.GRACE_HOPPER
-        return SystemType.GRACE_HOPPER
+    is_arm = cpu_arch == "aarch64"
+    has_nvidia_gpu = len(gpu_names) > 0
+
     if has_c2c:
-        return SystemType.GRACE_BLACKWELL
-    return SystemType.X86_DISCRETE
+        cpu_names = set()
+        for (a, b), v in connections.items():
+            if v == "C2C":
+                if a.startswith("CPU"):
+                    cpu_names.add(a)
+                if b.startswith("CPU"):
+                    cpu_names.add(b)
+        if cpu_names and gpu_names:
+            ratio = len(gpu_names) / len(cpu_names)
+            if ratio >= 2:
+                return SystemType.GRACE_BLACKWELL
+        return SystemType.GRACE_HOPPER
+
+    if is_arm:
+        if has_nvidia_gpu:
+            return SystemType.GRACE_HOPPER
+        return SystemType.ARM_DISCRETE
+
+    if cpu_arch in ("x86_64", "x86"):
+        return SystemType.X86_DISCRETE
+
+    return SystemType.UNKNOWN
 
 
 def build_topology(verbose: bool = False) -> Topology:
     topo = Topology()
 
     lscpu_info = collect_lscpu()
-    topo.cpu_arch = lscpu_info.get("Architecture", "x86_64")
+    topo.cpu_arch = lscpu_info.get("Architecture", "unknown")
     if verbose:
         topo.raw["lscpu"] = lscpu_info
 
@@ -688,11 +676,30 @@ def build_topology(verbose: bool = False) -> Topology:
     num_sockets = int(lscpu_info.get("Socket(s)", "1"))
     cores_per_socket = lscpu_info.get("Core(s) per socket", "?")
     cpu_model = lscpu_info.get("Model name", "Unknown CPU")
+
+    numa_nodes = sorted(numa_info.get("nodes", {}).keys())
+    if not numa_nodes:
+        numa_nodes = list(range(num_sockets))
+
+    socket_numa: dict[int, int] = {}
+    if num_sockets == 1:
+        socket_numa[0] = numa_nodes[0] if numa_nodes else 0
+    elif len(numa_nodes) >= num_sockets:
+        for s in range(num_sockets):
+            socket_numa[s] = numa_nodes[s]
+    else:
+        for s in range(num_sockets):
+            socket_numa[s] = s
+
+    cpu_device_names: set[str] = set()
     for s in range(num_sockets):
+        numa_id = socket_numa.get(s, s)
+        name = f"CPU{s}"
+        cpu_device_names.add(name)
         topo.devices.append(Device(
-            name=f"CPU{s}",
+            name=name,
             device_type=DeviceType.CPU,
-            numa_node=s,
+            numa_node=numa_id,
             details={
                 "model": cpu_model,
                 "cores": cores_per_socket,
@@ -785,10 +792,14 @@ def build_topology(verbose: bool = False) -> Topology:
 
         elif conn == "C2C":
             seen_links.add(key)
+            c2c_bw = 0.0
+            src_idx = int(row.replace("GPU", "")) if row.startswith("GPU") else -1
+            if src_idx >= 0 and nvlink_status.get(src_idx):
+                c2c_bw = sum(nvlink_status[src_idx]) * 2
             topo.links.append(Link(
                 src=row, dst=col,
                 link_type="NVLink-C2C",
-                bw_gbps=C2C_BW_GBPS,
+                bw_gbps=round(c2c_bw, 1),
             ))
 
     # PCIe tree from sysfs: NVMe, bridges, physical hierarchy
@@ -991,7 +1002,7 @@ def build_topology(verbose: bool = False) -> Topology:
     # between; inserting it shows the actual physical link.
     cpu_direct_links: list[Link] = [
         l for l in topo.links
-        if l.src.startswith("CPU") and l.dst not in ("CPU0", "CPU1")
+        if l.src in cpu_device_names and l.dst not in cpu_device_names
         and not any(d.name == l.dst and d.device_type in (DeviceType.MEMORY, DeviceType.PCIE_BRIDGE) for d in topo.devices)
     ]
     for link in cpu_direct_links:
@@ -1089,13 +1100,22 @@ def build_topology(verbose: bool = False) -> Topology:
                 bw_gbps=0,
             ))
 
-    # Inter-socket link
-    if topo.system_type == SystemType.X86_DISCRETE and num_sockets >= 2:
-        topo.links.append(Link(
-            src="CPU0", dst="CPU1",
-            link_type="UPI",
-            bw_gbps=82.0,
-        ))
+    # Inter-socket links
+    if num_sockets >= 2:
+        cpu_vendor = lscpu_info.get("Vendor ID", "")
+        if "AuthenticAMD" in cpu_vendor or "AMD" in cpu_vendor:
+            interconnect = "Infinity Fabric"
+        elif "GenuineIntel" in cpu_vendor:
+            interconnect = "UPI"
+        else:
+            interconnect = "Inter-socket"
+        for i in range(num_sockets):
+            for j in range(i + 1, num_sockets):
+                topo.links.append(Link(
+                    src=f"CPU{i}", dst=f"CPU{j}",
+                    link_type=interconnect,
+                    bw_gbps=0,
+                ))
 
     return topo
 
@@ -1174,6 +1194,8 @@ LINK_COLORS = {
     "NVLink": "#2ECC71",
     "PCIe": "#3498DB",
     "UPI": "#E74C3C",
+    "Infinity Fabric": "#E74C3C",
+    "Inter-socket": "#E74C3C",
     "DDR": "#2980B9",
 }
 
@@ -1190,7 +1212,7 @@ def _link_penwidth(link_type: str) -> str:
         return "3.0"
     if "C2C" in link_type:
         return "3.5"
-    if "UPI" in link_type:
+    if link_type in ("UPI", "Infinity Fabric", "Inter-socket"):
         return "2.0"
     return "1.5"
 
@@ -1272,7 +1294,7 @@ def export_dot(topo: Topology, path: Path) -> None:
         label = f"{link.link_type}"
         if bw_label:
             label += f"\\n{bw_label}"
-        style = 'style=dashed, ' if link.link_type == "UPI" else ""
+        style = 'style=dashed, ' if link.link_type in ("UPI", "Infinity Fabric", "Inter-socket") else ""
         direction = "dir=both, " if link.bidirectional else ""
         lines.append(
             f'  {src_id} -> {dst_id} [{direction}{style}'
@@ -1293,6 +1315,8 @@ MERMAID_LINK_STYLES = {
     "NVLink": "stroke:#2ECC71,stroke-width:3px",
     "PCIe": "stroke:#3498DB,stroke-width:2px",
     "UPI": "stroke:#E74C3C,stroke-width:2px,stroke-dasharray:5 5",
+    "Infinity Fabric": "stroke:#E74C3C,stroke-width:2px,stroke-dasharray:5 5",
+    "Inter-socket": "stroke:#E74C3C,stroke-width:2px,stroke-dasharray:5 5",
     "DDR": "stroke:#2980B9,stroke-width:2px,stroke-dasharray:4 4",
 }
 
