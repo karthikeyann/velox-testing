@@ -208,7 +208,9 @@ def collect_pcie_link(bdf: str) -> dict:
     the device is in a low-power idle state (Gen1/Gen2 on a device
     that supports Gen3+).
     """
-    bdf_sysfs = bdf.lower().replace("00000000:", "0000:")
+    bdf_sysfs = re.sub(r"^[0-9a-fA-F]{8}:", lambda m: m.group(0)[4:], bdf.lower().strip())
+    if not re.match(r"[0-9a-f]{4}:", bdf_sysfs):
+        bdf_sysfs = f"0000:{bdf_sysfs}"
     base = f"/sys/bus/pci/devices/{bdf_sysfs}"
 
     cur_speed = _read_sysfs(f"{base}/current_link_speed")
@@ -299,15 +301,14 @@ def collect_lspci_names() -> dict[str, str]:
     Returns {bdf_with_domain: short_product_name}, e.g.
     {"0000:05:00.0": "ConnectX-7"}.
     """
-    raw = _run("lspci")
+    raw = _run("lspci -D")
     result: dict[str, str] = {}
     for line in raw.splitlines():
         m = re.match(r"(\S+)\s+(.+)", line)
         if not m:
             continue
-        short_bdf = m.group(1)
+        full_bdf = m.group(1).lower()
         description = m.group(2)
-        full_bdf = f"0000:{short_bdf}"
 
         product = _extract_product_name(description)
         if product:
@@ -346,13 +347,13 @@ def collect_pcie_tree() -> dict[str, list[PcieTreeNode]]:
     Returns {root_complex_bdf: [top-level PcieTreeNode children]}.
     Each root complex represents a CPU root port.
     """
-    lspci_raw = _run("lspci -n")
+    lspci_raw = _run("lspci -Dn")
     bdf_class: dict[str, str] = {}
     bdf_vendor: dict[str, str] = {}
     for line in lspci_raw.splitlines():
         m = re.match(r"(\S+)\s+(\S+):\s+(\S+)", line)
         if m:
-            full_bdf = f"0000:{m.group(1)}"
+            full_bdf = m.group(1).lower()
             bdf_class[full_bdf] = m.group(2)
             vendor = m.group(3).split(":")[0] if ":" in m.group(3) else ""
             bdf_vendor[full_bdf] = vendor
@@ -404,7 +405,7 @@ def collect_pcie_tree() -> dict[str, list[PcieTreeNode]]:
             node = node.setdefault(bdf, {})
 
     def _build_nodes(subtree: dict, parent_bdf: str,
-                     upstream_link: dict | None = None) -> list[PcieTreeNode]:
+                     upstream_link: Optional[dict] = None) -> list[PcieTreeNode]:
         nodes: list[PcieTreeNode] = []
         for bdf, children_dict in subtree.items():
             cls = bdf_class.get(bdf, "")
@@ -417,8 +418,7 @@ def collect_pcie_tree() -> dict[str, list[PcieTreeNode]]:
             product = raw_name if raw_name else ""
             lspci_desc = ""
             if not product:
-                short_bdf = bdf.replace("0000:", "")
-                lspci_desc = _run(f"lspci -s {short_bdf}").strip()
+                lspci_desc = _run(f"lspci -s {bdf}").strip()
                 if lspci_desc and " " in lspci_desc:
                     lspci_desc = lspci_desc.split(" ", 1)[1]
 
@@ -797,17 +797,27 @@ def build_topology(verbose: bool = False) -> Topology:
         topo.raw["pcie_tree_roots"] = list(pcie_tree.keys())
 
     def _norm_bdf(bdf: str) -> str:
-        """Normalize BDF to 0000:xx:xx.x lowercase format."""
+        """Normalize BDF to DDDD:BB:DD.F lowercase format.
+
+        nvidia-smi uses 8-hex-digit domain (00000009:01:00.0) while
+        sysfs/lspci use 4-digit (0009:01:00.0).  Short BDFs without a
+        domain (01:00.0) get 0000: prepended.
+        """
         bdf = bdf.lower().strip()
-        if re.match(r"[0-9a-f]{8}:", bdf):
-            bdf = "0000:" + bdf[9:]
-        if not bdf.startswith("0000:"):
-            bdf = "0000:" + bdf
+        if re.match(r"[0-9a-f]{8}:[0-9a-f]{2}:[0-9a-f]{2}\.[0-9a-f]", bdf):
+            bdf = bdf[4:]
+        m = re.match(r"([0-9a-f]{4}):([0-9a-f]{2}):([0-9a-f]{2})\.([0-9a-f])", bdf)
+        if m:
+            return bdf
+        m = re.match(r"([0-9a-f]{2}):([0-9a-f]{2})\.([0-9a-f])", bdf)
+        if m:
+            return f"0000:{bdf}"
         return bdf
 
     gpu_bdf_to_name = {_norm_bdf(d.pci_bdf): d.name for d in topo.devices if d.device_type == DeviceType.GPU and d.pci_bdf}
     nic_bdf_to_name = {_norm_bdf(d.pci_bdf): d.name for d in topo.devices if d.device_type == DeviceType.NIC and d.pci_bdf}
-    existing_bdfs = gpu_bdf_to_name | nic_bdf_to_name
+    existing_bdfs = dict(gpu_bdf_to_name)
+    existing_bdfs.update(nic_bdf_to_name)
 
     bdf_to_topo_name: dict[str, str] = dict(existing_bdfs)
     nvme_counter = 0
@@ -1009,8 +1019,7 @@ def build_topology(verbose: bool = False) -> Topology:
             continue
         rp_name = lspci_names.get(rp_bdf, "")
         if not rp_name:
-            short = rp_bdf.replace("0000:", "")
-            desc = _run(f"lspci -s {short}").strip()
+            desc = _run(f"lspci -s {rp_bdf}").strip()
             if desc and " " in desc:
                 rp_name = _extract_product_name(desc.split(" ", 1)[1])
         if not rp_name:
