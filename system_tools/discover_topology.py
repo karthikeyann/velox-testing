@@ -403,7 +403,8 @@ def collect_pcie_tree() -> dict[str, list[PcieTreeNode]]:
         for bdf in chain[1:]:
             node = node.setdefault(bdf, {})
 
-    def _build_nodes(subtree: dict, parent_bdf: str) -> list[PcieTreeNode]:
+    def _build_nodes(subtree: dict, parent_bdf: str,
+                     upstream_link: dict | None = None) -> list[PcieTreeNode]:
         nodes: list[PcieTreeNode] = []
         for bdf, children_dict in subtree.items():
             cls = bdf_class.get(bdf, "")
@@ -432,9 +433,20 @@ def collect_pcie_tree() -> dict[str, list[PcieTreeNode]]:
             except (OSError, ValueError):
                 pass
 
-            pcie_link = collect_pcie_link(bdf) if (bdf in interesting_bdfs or is_bridge) else {}
+            my_link = collect_pcie_link(bdf) if (is_interesting or is_bridge) else {}
 
-            child_nodes = _build_nodes(children_dict, bdf)
+            # Upstream link propagation: the first bridge in the chain
+            # (root port) sets the real physical uplink speed.  Subsequent
+            # internal switch ports may report lower fabric speeds — keep
+            # the root port's value in that case.
+            if upstream_link and upstream_link.get("bw_bidi_gbps", 0) > 0:
+                best_upstream = upstream_link
+            elif my_link and my_link.get("bw_bidi_gbps", 0) > 0:
+                best_upstream = my_link
+            else:
+                best_upstream = upstream_link or my_link
+
+            child_nodes = _build_nodes(children_dict, bdf, best_upstream)
             interesting_below = is_interesting or any(
                 c.is_interesting or c.children for c in child_nodes
             )
@@ -442,7 +454,10 @@ def collect_pcie_tree() -> dict[str, list[PcieTreeNode]]:
             if not interesting_below and not is_interesting:
                 continue
 
-            if not is_interesting and len(child_nodes) == 1 and not is_bridge:
+            if not is_interesting and len(child_nodes) == 1:
+                child = child_nodes[0]
+                if not child.pcie_link:
+                    child.pcie_link = best_upstream or {}
                 nodes.extend(child_nodes)
                 continue
 
@@ -452,7 +467,7 @@ def collect_pcie_tree() -> dict[str, list[PcieTreeNode]]:
                 product=product,
                 device_type=dtype if is_interesting else DeviceType.PCIE_BRIDGE,
                 numa_node=numa,
-                pcie_link=pcie_link,
+                pcie_link=best_upstream if is_bridge else my_link,
                 children=child_nodes,
                 is_bridge=not is_interesting,
                 is_interesting=is_interesting,
@@ -799,31 +814,6 @@ def build_topology(verbose: bool = False) -> Topology:
     eth_counter = 0
     bridge_counter = 0
 
-    def _find_root_port_link(bdf: str) -> dict:
-        """Walk sysfs path from *bdf* toward the root and return the link
-        speed of the root port (the first bridge directly under the root
-        complex).  This gives the actual physical uplink speed, which may
-        differ from an internal switch port's reported speed."""
-        sysfs = Path(f"/sys/bus/pci/devices/{bdf}")
-        try:
-            real = str(sysfs.resolve())
-        except OSError:
-            return {}
-        parts = real.split("/")
-        root_idx = None
-        for i, p in enumerate(parts):
-            if p.startswith("pci"):
-                root_idx = i
-                break
-        if root_idx is None:
-            return {}
-        first_bridge_bdf = parts[root_idx + 1] if root_idx + 1 < len(parts) else None
-        if first_bridge_bdf and re.match(
-            r"[0-9a-f]{4}:[0-9a-f]{2}:[0-9a-f]{2}\.[0-9a-f]", first_bridge_bdf
-        ):
-            return collect_pcie_link(first_bridge_bdf)
-        return {}
-
     def _flatten_tree(nodes: list[PcieTreeNode], parent_name: str) -> None:
         nonlocal nvme_counter, eth_counter, bridge_counter
         for node in nodes:
@@ -888,12 +878,6 @@ def build_topology(verbose: bool = False) -> Topology:
             pcie_info = node.pcie_link
             bw = pcie_info.get("bw_bidi_gbps", 0) if pcie_info else 0
             label = pcie_info.get("label", "PCIe") if pcie_info else "PCIe"
-
-            if parent_name and node.is_bridge and parent_name.startswith("CPU"):
-                upstream = _find_root_port_link(node.bdf)
-                if upstream:
-                    bw = upstream.get("bw_bidi_gbps", bw)
-                    label = upstream.get("label", label)
 
             if parent_name:
                 topo.links.append(Link(
@@ -991,23 +975,93 @@ def build_topology(verbose: bool = False) -> Topology:
                 ))
                 break
 
-    # Memory devices — detect DDR generation from EDAC, dmidecode, or lscpu
+    # Insert root-port bridges for devices connected directly to a CPU.
+    # When the PCIe tree collapses single-child bridges, leaf devices end up
+    # linked straight to the CPU.  But there's always a root-port bridge in
+    # between; inserting it shows the actual physical link.
+    cpu_direct_links: list[Link] = [
+        l for l in topo.links
+        if l.src.startswith("CPU") and l.dst not in ("CPU0", "CPU1")
+        and not any(d.name == l.dst and d.device_type in (DeviceType.MEMORY, DeviceType.PCIE_BRIDGE) for d in topo.devices)
+    ]
+    for link in cpu_direct_links:
+        dev = _find_device(topo, link.dst)
+        if not dev or not dev.pci_bdf:
+            continue
+        norm_bdf = _norm_bdf(dev.pci_bdf)
+        sysfs = Path(f"/sys/bus/pci/devices/{norm_bdf}")
+        try:
+            real = str(sysfs.resolve())
+        except OSError:
+            continue
+        parts = real.split("/")
+        root_idx = None
+        for i, p in enumerate(parts):
+            if p.startswith("pci"):
+                root_idx = i
+                break
+        if root_idx is None:
+            continue
+        rp_bdf = parts[root_idx + 1] if root_idx + 1 < len(parts) else None
+        if not rp_bdf or rp_bdf == norm_bdf:
+            continue
+        if not re.match(r"[0-9a-f]{4}:[0-9a-f]{2}:[0-9a-f]{2}\.[0-9a-f]", rp_bdf):
+            continue
+        rp_name = lspci_names.get(rp_bdf, "")
+        if not rp_name:
+            short = rp_bdf.replace("0000:", "")
+            desc = _run(f"lspci -s {short}").strip()
+            if desc and " " in desc:
+                rp_name = _extract_product_name(desc.split(" ", 1)[1])
+        if not rp_name:
+            rp_name = rp_bdf
+        bridge_name = f"Bridge{bridge_counter}"
+        bridge_counter += 1
+        rp_link = collect_pcie_link(rp_bdf)
+        topo.devices.append(Device(
+            name=bridge_name,
+            device_type=DeviceType.PCIE_BRIDGE,
+            pci_bdf=rp_bdf,
+            numa_node=dev.numa_node,
+            details={"product": rp_name[:40]},
+        ))
+        rp_bw = rp_link.get("bw_bidi_gbps", 0)
+        rp_label = rp_link.get("label", "PCIe")
+        link.dst = bridge_name
+        link.link_type = rp_label if rp_bw > 0 else link.link_type
+        link.bw_gbps = rp_bw if rp_bw > 0 else link.bw_gbps
+        topo.links.append(Link(
+            src=bridge_name, dst=dev.name,
+            link_type=dev.details.get("pcie", {}).get("label", link.link_type),
+            bw_gbps=dev.details.get("pcie", {}).get("bw_bidi_gbps", link.bw_gbps),
+        ))
+
+    # Memory devices — detect DDR generation from EDAC, dmidecode, or sysfs
     ddr_type = "DDR"
-    edac_type = _read_sysfs("/sys/devices/system/edac/mc/mc0/dimm0/dimm_mem_type")
-    if edac_type:
-        m = re.search(r"(DDR\d)", edac_type, re.IGNORECASE)
-        if m:
-            ddr_type = m.group(1).upper()
+    edac_base = Path("/sys/devices/system/edac/mc")
+    if edac_base.is_dir():
+        for mc_dir in sorted(edac_base.iterdir()):
+            if not mc_dir.name.startswith("mc"):
+                continue
+            for dimm_dir in sorted(mc_dir.iterdir()):
+                mem_type_file = dimm_dir / "dimm_mem_type"
+                if mem_type_file.is_file():
+                    raw = _read_sysfs(str(mem_type_file))
+                    m = re.search(r"(DDR\d)", raw, re.IGNORECASE)
+                    if m:
+                        ddr_type = m.group(1).upper()
+                        break
+            if ddr_type != "DDR":
+                break
     if ddr_type == "DDR":
         dmi_raw = _run("dmidecode -t memory 2>/dev/null")
-        if dmi_raw:
-            for line in dmi_raw.splitlines():
-                stripped = line.strip()
-                if stripped.startswith("Type:") and "DDR" in stripped:
-                    m = re.search(r"(DDR\d)", stripped)
-                    if m:
-                        ddr_type = m.group(1)
-                        break
+        for line in dmi_raw.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("Type:") and "DDR" in stripped:
+                m = re.search(r"(DDR\d)", stripped)
+                if m:
+                    ddr_type = m.group(1)
+                    break
 
     for nid, info in numa_info.get("nodes", {}).items():
         size_mb = info.get("size_mb", 0)
