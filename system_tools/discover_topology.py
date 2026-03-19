@@ -186,32 +186,59 @@ def collect_nvlink_status() -> dict[int, list[float]]:
     return result
 
 
+def _read_sysfs(path: str) -> str:
+    try:
+        with open(path) as f:
+            return f.read().strip()
+    except (OSError, FileNotFoundError):
+        return ""
+
+
+def _pcie_gen(speed_key: str) -> str:
+    for prefix, gen in [("64", "5"), ("32", "5"), ("16", "4"), ("8", "3"), ("5", "2"), ("2.5", "1")]:
+        if speed_key.startswith(prefix):
+            return gen
+    return ""
+
+
 def collect_pcie_link(bdf: str) -> dict:
-    """Read PCIe link speed/width from sysfs (no sudo needed)."""
+    """Read PCIe link speed/width from sysfs.
+
+    Prefers current_link_speed but falls back to max_link_speed when
+    the device is in a low-power idle state (Gen1/Gen2 on a device
+    that supports Gen3+).
+    """
     bdf_sysfs = bdf.lower().replace("00000000:", "0000:")
     base = f"/sys/bus/pci/devices/{bdf_sysfs}"
-    speed_raw = ""
-    width_raw = ""
-    try:
-        with open(f"{base}/current_link_speed") as f:
-            speed_raw = f.read().strip()
-        with open(f"{base}/current_link_width") as f:
-            width_raw = f.read().strip()
-    except (OSError, FileNotFoundError):
-        pass
 
-    speed_key = speed_raw.replace("PCIe", "").strip()
-    per_lane = PCIE_SPEED_TABLE.get(speed_key, 0.0)
+    cur_speed = _read_sysfs(f"{base}/current_link_speed")
+    cur_width = _read_sysfs(f"{base}/current_link_width")
+    max_speed = _read_sysfs(f"{base}/max_link_speed")
+    max_width = _read_sysfs(f"{base}/max_link_width")
+
+    cur_key = cur_speed.replace("PCIe", "").strip()
+    max_key = max_speed.replace("PCIe", "").strip()
+
+    cur_per_lane = PCIE_SPEED_TABLE.get(cur_key, 0.0)
+    max_per_lane = PCIE_SPEED_TABLE.get(max_key, 0.0)
+
     try:
-        width = int(width_raw)
+        cw = int(cur_width)
     except ValueError:
-        width = 0
+        cw = 0
+    try:
+        mw = int(max_width)
+    except ValueError:
+        mw = 0
+
+    use_max = max_per_lane * mw > cur_per_lane * cw and cur_per_lane <= PCIE_SPEED_TABLE.get("5 GT/s", 0.5)
+    if use_max and max_per_lane > 0:
+        speed_raw, speed_key, per_lane, width = max_speed, max_key, max_per_lane, mw
+    else:
+        speed_raw, speed_key, per_lane, width = cur_speed, cur_key, cur_per_lane, cw
+
     bw_per_dir = per_lane * width
-    gen = ""
-    for k, v in [("64", "5"), ("32", "5"), ("16", "4"), ("8", "3"), ("5", "2"), ("2.5", "1")]:
-        if speed_key.startswith(k):
-            gen = v
-            break
+    gen = _pcie_gen(speed_key)
     return {
         "speed_raw": speed_raw,
         "width": width,
@@ -877,22 +904,50 @@ def build_topology(verbose: bool = False) -> Topology:
 
             _flatten_tree(node.children, this_name)
 
+    def _find_numa_recursive(n: PcieTreeNode) -> int:
+        if n.numa_node >= 0:
+            return n.numa_node
+        for c in n.children:
+            r = _find_numa_recursive(c)
+            if r >= 0:
+                return r
+        return -1
+
+    # Build a map from PCIe root complex to NUMA node.
+    # First try sysfs numa_node.  If sysfs reports -1 for every device,
+    # fall back to the nvidia-smi NUMA mapping (which parsed topo -m).
     numa_to_root: dict[int, set[str]] = defaultdict(set)
     for root_bdf, nodes in pcie_tree.items():
         for node in nodes:
-            numa = node.numa_node
-            if numa < 0:
-                def _find_numa(n: PcieTreeNode) -> int:
-                    if n.numa_node >= 0:
-                        return n.numa_node
-                    for c in n.children:
-                        r = _find_numa(c)
-                        if r >= 0:
-                            return r
-                    return -1
-                numa = _find_numa(node)
+            numa = _find_numa_recursive(node)
             if numa >= 0:
                 numa_to_root[numa].add(root_bdf)
+
+    if not numa_to_root:
+        gpu_numa = {_norm_bdf(d.pci_bdf): d.numa_node
+                    for d in topo.devices
+                    if d.pci_bdf and d.numa_node >= 0}
+        for root_bdf, nodes in pcie_tree.items():
+            def _match_gpu_numa(n: PcieTreeNode) -> int:
+                matched = gpu_numa.get(n.bdf, -1)
+                if matched >= 0:
+                    return matched
+                for c in n.children:
+                    r = _match_gpu_numa(c)
+                    if r >= 0:
+                        return r
+                return -1
+            for node in nodes:
+                numa = _match_gpu_numa(node)
+                if numa >= 0:
+                    numa_to_root[numa].add(root_bdf)
+                    break
+
+    # Last resort: single-socket system where nothing reports NUMA.
+    # Assign all unmatched root complexes to CPU0.
+    all_roots_mapped = set()
+    for roots in numa_to_root.values():
+        all_roots_mapped |= roots
 
     for root_bdf, nodes in pcie_tree.items():
         cpu_name = None
@@ -900,6 +955,8 @@ def build_topology(verbose: bool = False) -> Topology:
             if root_bdf in roots:
                 cpu_name = f"CPU{numa_id}"
                 break
+        if cpu_name is None and num_sockets == 1:
+            cpu_name = "CPU0"
         _flatten_tree(nodes, cpu_name or "")
 
     # Link multi-function NIC siblings to the same parent as function 0.
@@ -934,7 +991,24 @@ def build_topology(verbose: bool = False) -> Topology:
                 ))
                 break
 
-    # Memory devices
+    # Memory devices — detect DDR generation from EDAC, dmidecode, or lscpu
+    ddr_type = "DDR"
+    edac_type = _read_sysfs("/sys/devices/system/edac/mc/mc0/dimm0/dimm_mem_type")
+    if edac_type:
+        m = re.search(r"(DDR\d)", edac_type, re.IGNORECASE)
+        if m:
+            ddr_type = m.group(1).upper()
+    if ddr_type == "DDR":
+        dmi_raw = _run("dmidecode -t memory 2>/dev/null")
+        if dmi_raw:
+            for line in dmi_raw.splitlines():
+                stripped = line.strip()
+                if stripped.startswith("Type:") and "DDR" in stripped:
+                    m = re.search(r"(DDR\d)", stripped)
+                    if m:
+                        ddr_type = m.group(1)
+                        break
+
     for nid, info in numa_info.get("nodes", {}).items():
         size_mb = info.get("size_mb", 0)
         size_gb = round(size_mb / 1024, 1)
@@ -944,11 +1018,11 @@ def build_topology(verbose: bool = False) -> Topology:
                 name=mem_name,
                 device_type=DeviceType.MEMORY,
                 numa_node=nid,
-                details={"size_gb": size_gb},
+                details={"size_gb": size_gb, "type": ddr_type},
             ))
             topo.links.append(Link(
                 src=f"CPU{nid}", dst=mem_name,
-                link_type="DDR5",
+                link_type=ddr_type,
                 bw_gbps=0,
             ))
 
@@ -1076,6 +1150,23 @@ def export_dot(topo: Topology, path: Path) -> None:
     for d in topo.devices:
         by_numa[d.numa_node].append(d)
 
+    def _dot_device_detail(d: Device) -> str:
+        if d.device_type == DeviceType.GPU:
+            return f"\\n{d.details.get('model', '')}"
+        if d.device_type == DeviceType.CPU:
+            return f"\\n{d.details.get('model', '')}"
+        if d.device_type == DeviceType.NIC:
+            return _nic_detail_label(d, sep="\\n")
+        if d.device_type == DeviceType.NVME:
+            return f"\\n{d.details.get('product', '')}"
+        if d.device_type == DeviceType.ETHERNET:
+            return f"\\n{d.details.get('product', '')}"
+        if d.device_type == DeviceType.PCIE_BRIDGE:
+            return f"\\n{d.details.get('product', '')}"
+        if d.device_type == DeviceType.MEMORY:
+            return f"\\n{d.details.get('size_gb', '')} GB"
+        return ""
+
     for numa_id in sorted(by_numa):
         if numa_id < 0:
             continue
@@ -1086,21 +1177,7 @@ def export_dot(topo: Topology, path: Path) -> None:
         for d in by_numa[numa_id]:
             nid = _dot_node_id(d.name)
             color = DOT_COLORS.get(d.device_type, "#BDC3C7")
-            detail = ""
-            if d.device_type == DeviceType.GPU:
-                detail = f"\\n{d.details.get('model', '')}"
-            elif d.device_type == DeviceType.CPU:
-                detail = f"\\n{d.details.get('model', '')}"
-            elif d.device_type == DeviceType.NIC:
-                detail = _nic_detail_label(d, sep="\\n")
-            elif d.device_type == DeviceType.NVME:
-                detail = f"\\n{d.details.get('product', '')}"
-            elif d.device_type == DeviceType.ETHERNET:
-                detail = f"\\n{d.details.get('product', '')}"
-            elif d.device_type == DeviceType.PCIE_BRIDGE:
-                detail = f"\\n{d.details.get('product', '')}"
-            elif d.device_type == DeviceType.MEMORY:
-                detail = f"\\n{d.details.get('size_gb', '')} GB"
+            detail = _dot_device_detail(d)
             lines.append(
                 f'    {nid} [label="{d.name}{detail}", '
                 f'fillcolor="{color}", fontcolor="white"];'
@@ -1110,8 +1187,9 @@ def export_dot(topo: Topology, path: Path) -> None:
     for d in by_numa.get(-1, []):
         nid = _dot_node_id(d.name)
         color = DOT_COLORS.get(d.device_type, "#BDC3C7")
+        detail = _dot_device_detail(d)
         lines.append(
-            f'  {nid} [label="{d.name}", fillcolor="{color}", fontcolor="white"];'
+            f'  {nid} [label="{d.name}{detail}", fillcolor="{color}", fontcolor="white"];'
         )
 
     lines.append("")
@@ -1152,7 +1230,7 @@ MERMAID_LINK_STYLES = {
     "NVLink": "stroke:#2ECC71,stroke-width:3px",
     "PCIe": "stroke:#3498DB,stroke-width:2px",
     "UPI": "stroke:#E74C3C,stroke-width:2px,stroke-dasharray:5 5",
-    "DDR": "stroke:#2980B9,stroke-width:2px,stroke-dasharray:3 3",
+    "DDR": "stroke:#2980B9,stroke-width:2px,stroke-dasharray:4 4",
 }
 
 
