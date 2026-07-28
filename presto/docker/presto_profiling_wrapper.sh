@@ -15,4 +15,5 @@ fi
 
 ldconfig
 
-$PROFILE_CMD bash /opt/launch_presto_servers.sh "$@"
+# Make the launcher responsible for PID 1 signal handling when profiling is off.
+exec $PROFILE_CMD bash /opt/launch_presto_servers.sh "$@"

@@ -4,8 +4,9 @@
 """
 Gather run configuration from execution context. Engine (presto-java / presto-velox-cpu / presto-velox-gpu)
 is determined from the coordinator's cluster-tag (via /v1/cluster). GPU name is
-read from worker log files (LOGS_DIR env var). Scale factor and n_workers come from
-schema and Presto /v1/node respectively.
+read from worker log files (LOGS_DIR env var). Scale factor comes from an
+explicit benchmark option when supplied, otherwise from schema metadata.
+Worker count comes from Presto /v1/node.
 """
 
 import json
@@ -223,19 +224,25 @@ def gather_run_context(
     port: int,
     user: str,
     schema_name: str,
+    scale_factor: str | float | int | None = None,
 ) -> dict:
     """
     Build run-config dict from context. Engine is determined from the
-    coordinator's cluster-tag (via /v1/cluster). Scale factor is read
-    from the metadata file next to the schema's table data.
+    coordinator's cluster-tag (via /v1/cluster). When scale_factor is not
+    supplied, scale factor and data directory are read from the metadata file
+    next to the schema's table data using Presto metadata SQL.
     """
     ctx = {}
-    schema_info = _get_schema_info(hostname, port, user, schema_name)
-    sf = schema_info["scale_factor"]
-    if sf is not None:
-        ctx["scale_factor"] = int(sf) if isinstance(sf, float) and sf == int(sf) else sf
-    if schema_info["data_dir"] is not None:
-        ctx["data_dir"] = schema_info["data_dir"]
+    if scale_factor is None:
+        schema_info = _get_schema_info(hostname, port, user, schema_name)
+        sf = schema_info["scale_factor"]
+        if sf is not None:
+            ctx["scale_factor"] = int(sf) if isinstance(sf, float) and sf == int(sf) else sf
+        if schema_info["data_dir"] is not None:
+            ctx["data_dir"] = schema_info["data_dir"]
+    else:
+        sf = float(scale_factor)
+        ctx["scale_factor"] = int(sf) if sf.is_integer() else sf
 
     n_workers = _get_node_count(hostname, port)
     engine = _get_engine(hostname, port)

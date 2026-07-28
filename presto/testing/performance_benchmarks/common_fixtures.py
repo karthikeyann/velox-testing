@@ -27,12 +27,14 @@ def run_context_collector(request):
     port = request.config.getoption("--port")
     user = request.config.getoption("--user")
     schema_name = request.config.getoption("--schema-name")
+    scale_factor = request.config.getoption("--scale-factor")
 
     ctx = gather_run_context(
         hostname=hostname,
         port=port,
         user=user,
         schema_name=schema_name,
+        scale_factor=scale_factor,
     )
     ctx["timestamp"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     yield ctx

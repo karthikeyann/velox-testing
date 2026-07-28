@@ -11,6 +11,24 @@ mkdir -p "${LOGS_DIR}"
 : "${SERVER_START_TIMESTAMP:?SERVER_START_TIMESTAMP must be set before starting the container}"
 
 ETC_BASE="/opt/presto-server/etc"
+worker_pids=()
+
+# Keep the PID 1 shell alive until each worker handles the container signal.
+shutdown_workers() {
+  local signal=$1
+  trap - TERM INT
+  echo "Forwarding $signal to Presto worker processes: ${worker_pids[*]}"
+  if ((${#worker_pids[@]} > 0)); then
+    kill -s "$signal" "${worker_pids[@]}" 2>/dev/null || true
+    for pid in "${worker_pids[@]}"; do
+      wait "$pid" || true
+    done
+  fi
+  exit 0
+}
+
+trap 'shutdown_workers TERM' TERM
+trap 'shutdown_workers INT' INT
 
 # Resolve the NUMA node for a worker and launch presto_server pinned to it.
 # For GPU workers: pins to the NUMA node closest to the GPU via nvidia-smi topology.
@@ -58,6 +76,7 @@ launch_worker() {
   log_file="${LOGS_DIR}/worker_${worker_id}_${SERVER_START_TIMESTAMP}.log"
   echo "GPU Name: ${gpu_name:-unknown}" > "${log_file}"
   env "${cuda_env[@]}" "${launcher[@]}" presto_server --etc-dir="$etc_dir" >> "${log_file}" 2>&1 &
+  worker_pids+=("$!")
 }
 
 # No args → single worker using CUDA_VISIBLE_DEVICES (default 0), shared config dir.
@@ -72,4 +91,8 @@ else
   done
 fi
 
-wait
+status=0
+for pid in "${worker_pids[@]}"; do
+  wait "$pid" || status=$?
+done
+exit "$status"
