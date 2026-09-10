@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025-2026, NVIDIA CORPORATION.
 # SPDX-License-Identifier: Apache-2.0
 
+import json
 import os
 import shutil
 from contextlib import suppress
@@ -27,6 +28,7 @@ from .ctas import (
     finalize_ctas_results,
 )
 from .metrics_collector import collect_metrics
+from .query_measurement import execute_measured_query
 from .run_context import gather_run_context
 
 # Session attribute marking that --cache-mode=lukewarm's one-time reset has run.
@@ -42,14 +44,17 @@ def _record_reset_layers(request, layers):
     setattr(request.session, CACHE_RESET_LAYERS, getattr(request.session, CACHE_RESET_LAYERS, set()) | layers)
 
 
-def write_query_result(cursor, output_dir, query_id):
-    rows = cursor.fetchall()
+def write_query_result(cursor, rows, output_dir, query_id, iteration_num):
     columns = [description[0] for description in cursor.description]
     frame = pd.DataFrame(rows, columns=columns)
 
     results_dir = Path(output_dir) / "query_results"
     results_dir.mkdir(parents=True, exist_ok=True)
-    frame.to_parquet(results_dir / f"{query_id.lower()}.parquet", index=False)
+    if iteration_num == 0:
+        frame.to_parquet(results_dir / f"{query_id.lower()}.parquet", index=False)
+    iterations_dir = results_dir / "iterations"
+    iterations_dir.mkdir(parents=True, exist_ok=True)
+    frame.to_parquet(iterations_dir / f"{query_id.lower()}_{iteration_num:03d}.parquet", index=False)
 
 
 @pytest.fixture(scope="module")
@@ -232,19 +237,28 @@ def benchmark_query(request, presto_cursor, benchmark_queries, benchmark_result_
                 else:
                     query = "--" + str(benchmark_type) + "_" + str(query_id) + "--" + "\n" + benchmark_queries[query_id]
 
-                cursor = presto_cursor.execute(query)
+                measurement = execute_measured_query(presto_cursor, query)
+                result.append(measurement.server_elapsed_ms)
+                cursor = presto_cursor
+                if ctas_results is None:
+                    write_query_result(cursor, measurement.rows, bench_output_dir, query_id, iteration_num)
 
-                if ctas_results is not None:
-                    # CTAS returns only its update count to the client. Consuming it
-                    # ensures all worker writes have completed before recording stats.
-                    cursor.fetchall()
-                    result.append(cursor.stats["elapsedTimeMillis"])
-                else:
-                    # Preserve the historical non-CTAS timing point: record stats
-                    # immediately after execute(), before consuming result pages.
-                    result.append(cursor.stats["elapsedTimeMillis"])
-                    if iteration_num == 0:
-                        write_query_result(cursor, bench_output_dir, query_id)
+                measurements_dir = Path(bench_output_dir) / "measurements" / str(query_id)
+                measurements_dir.mkdir(parents=True, exist_ok=True)
+                with (measurements_dir / f"{iteration_num:03d}.json").open("w") as output:
+                    json.dump(
+                        {
+                            "query_id": measurement.query_id,
+                            "iteration": iteration_num,
+                            "client_elapsed_ms": measurement.client_elapsed_ms,
+                            "server_elapsed_ms": measurement.server_elapsed_ms,
+                            "row_count": len(measurement.rows),
+                            "stats": measurement.stats,
+                        },
+                        output,
+                        indent=2,
+                    )
+                    output.write("\n")
 
                 # Collect metrics after each query iteration if enabled
                 if metrics:

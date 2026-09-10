@@ -120,6 +120,15 @@ pytest tpch_test.py
    ```
    > **Note:** The `--schema-name` flag is required to specify your target DB schema for the benchmark.
 
+Every iteration consumes all result pages before its final server elapsed time
+is recorded. `measurements/QN/NNN.json` also records client elapsed time
+(submission through complete result transfer), query ID and final statement
+statistics. Result-file writes and diagnostic collection are outside timing.
+Non-CTAS results from every iteration are preserved under
+`query_results/iterations/`; the first result also retains the usual
+`query_results/qN.parquet` path for compatibility. Historical measurements taken
+before complete result consumption have a different timing scope.
+
 ## Directory Structure
 
 - **`docker/`** - Docker Compose configurations and Dockerfiles for different Presto variants
