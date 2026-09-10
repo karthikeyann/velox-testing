@@ -129,6 +129,15 @@ Non-CTAS results from every iteration are preserved under
 `query_results/qN.parquet` path for compatibility. Historical measurements taken
 before complete result consumption have a different timing scope.
 
+Use repeatable `--session-property NAME=VALUE` options to compare existing Presto
+settings without editing SQL or restarting the coordinator. For example,
+`--session-property task_concurrency=1 --session-property join_prefilter_build_side=true`.
+The settings apply to benchmark queries through the Presto client API and are
+saved as `context.benchmark_session_properties` in `benchmark_result.json`.
+Duplicate names and malformed settings are rejected; unspecified settings retain
+the server defaults. Both the shell wrapper and direct pytest entrypoint support
+this option.
+
 ## Directory Structure
 
 - **`docker/`** - Docker Compose configurations and Dockerfiles for different Presto variants

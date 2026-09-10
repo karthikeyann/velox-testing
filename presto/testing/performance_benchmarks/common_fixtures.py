@@ -30,6 +30,7 @@ from .ctas import (
 from .metrics_collector import collect_metrics
 from .query_measurement import execute_measured_query
 from .run_context import gather_run_context
+from .session_properties import parse_session_properties
 
 # Session attribute marking that --cache-mode=lukewarm's one-time reset has run.
 _LUKEWARM_RESET_DONE = "_cache_mode_lukewarm_reset_done"
@@ -128,6 +129,7 @@ def run_context_collector(request):
             returncode=1,
         )
     ctx["timestamp"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    ctx["benchmark_session_properties"] = parse_session_properties(request.config.getoption("--session-property"))
     yield ctx
     request.session.run_context = ctx
 
@@ -159,7 +161,10 @@ def presto_cursor(request):
     port = request.config.getoption("--port")
     user = request.config.getoption("--user")
     schema = request.config.getoption("--schema-name")
-    conn = prestodb.dbapi.connect(host=hostname, port=port, user=user, catalog="hive", schema=schema)
+    properties = parse_session_properties(request.config.getoption("--session-property"))
+    conn = prestodb.dbapi.connect(
+        host=hostname, port=port, user=user, catalog="hive", schema=schema, session_properties=properties
+    )
     return conn.cursor()
 
 

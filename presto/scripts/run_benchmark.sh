@@ -14,6 +14,8 @@ export LOGS_DIR="${LOGS_DIR:-${SCRIPT_DIR}/presto_logs}"
 
 source "${SCRIPT_DIR}/presto_connection_defaults.sh"
 
+SESSION_PROPERTY_ARGS=()
+
 print_help() {
   cat << EOF
 
@@ -31,6 +33,8 @@ OPTIONS:
     -H, --hostname          Hostname of the Presto coordinator.
     --port                  Port number of the Presto coordinator.
     -u, --user              User who queries will be executed as.
+    --session-property     Presto session setting NAME=VALUE. Repeat for multiple settings.
+                            Applied through the client API and recorded in benchmark metadata.
     -s, --schema-name       Name of the schema containing the tables that will be queried. This must be an existing
                             schema that contains the benchmark tables.
     -o, --output-dir        Directory path that will contain the output files from the benchmark run.
@@ -152,6 +156,15 @@ parse_args() {
           shift 2
         else
           echo "Error: --user requires a value"
+          exit 1
+        fi
+        ;;
+      --session-property)
+        if [[ -n ${2:-} ]]; then
+          SESSION_PROPERTY_ARGS+=("--session-property=$2")
+          shift 2
+        else
+          echo "Error: --session-property requires NAME=VALUE"
           exit 1
         fi
         ;;
@@ -405,7 +418,7 @@ echo "Using PRESTO_IMAGE_TAG: $PRESTO_IMAGE_TAG"
 
 BENCHMARK_TEST_DIR=${TEST_DIR}/performance_benchmarks
 PYTEST_EXIT=0
-pytest -q -s ${BENCHMARK_TEST_DIR}/${BENCHMARK_TYPE}_test.py ${PYTEST_ARGS[*]} || PYTEST_EXIT=$?
+pytest -q -s ${BENCHMARK_TEST_DIR}/${BENCHMARK_TYPE}_test.py ${PYTEST_ARGS[*]} "${SESSION_PROPERTY_ARGS[@]}" || PYTEST_EXIT=$?
 
 # Snapshot logs and engine configs into the benchmark output directory so that
 # post_results.py has self-contained, run-specific data even when multiple runs

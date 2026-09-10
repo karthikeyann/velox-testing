@@ -31,6 +31,7 @@ from .common_fixtures import (
     run_context_collector,  # noqa: F401
     verify_tables_analyzed,  # noqa: F401
 )
+from .session_properties import parse_session_properties
 
 
 def pytest_addoption(parser):
@@ -41,6 +42,13 @@ def pytest_addoption(parser):
     parser.addoption("--hostname", default="localhost")
     parser.addoption("--port", default=8080, type=int)
     parser.addoption("--user", default="test_user")
+    parser.addoption(
+        "--session-property",
+        action="append",
+        default=[],
+        metavar="NAME=VALUE",
+        help="Presto session property for measured queries; repeat for multiple settings.",
+    )
     parser.addoption("--iterations", default=5, type=int)
     parser.addoption("--output-dir", default="benchmark_output")
     parser.addoption("--tag")
@@ -78,6 +86,10 @@ def pytest_addoption(parser):
 
 
 def pytest_configure(config):
+    try:
+        parse_session_properties(config.getoption("--session-property"))
+    except ValueError as error:
+        raise pytest.UsageError(str(error)) from error
     # Validate rather than silently falling back at report time: a warm-up iteration
     # reported as a steady-state number is worse than a failed run.
     warmup = config.getoption("--warmup-iterations")
