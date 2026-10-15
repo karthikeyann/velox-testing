@@ -716,9 +716,13 @@ document.addEventListener("drop", (e) => { e.preventDefault(); ingestDataTransfe
 
 const params = new URLSearchParams(location.search);
 if (["run", "diff", "trend"].includes(params.get("tab"))) state.tab = params.get("tab");
+// A published site has manifest.json next to the page; load it by default and
+// fall back to the drop zone when there is none (opened from disk, or no runs).
 const manifest = params.get("manifest");
-if (manifest) ingestManifest(manifest).catch((e) => { state.errors = [`manifest ${manifest}: ${e.message}`]; render(); });
-else render();
+ingestManifest(manifest || "manifest.json").catch((e) => {
+  if (manifest) state.errors = [`manifest ${manifest}: ${e.message}`];
+  render();
+});
 </script>
 </body>
 </html>
