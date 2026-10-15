@@ -1,0 +1,7 @@
+date: 2026-10-15T09:03:46Z
+image: ghcr.io/rapidsai/velox-testing-images:staging-images-presto-f2f6f86-velox-0f80642-gpu-cuda12.9-20261015-staging-amd64-vt-0610738-38701200069 sha256:d998fdefbcda8ba0286c1817b4a16731d22d5f8004c2ad8591db7ff0779343c4
+velox-testing.presto.sha=f2f6f86611e8e1584e3fc9b9503790e751407132
+velox-testing.velox.sha=0f8064257133a2c6f0cee354448bcb714b887929
+presto: f2f6f86611e8e1584e3fc9b9503790e751407132 (+ uncommitted: )
+velox:  6c702140daabf9f1388a455723a020353fb9c1a0 (+ uncommitted: )
+allowed_cpu_ops: Exchange,MergeExchange

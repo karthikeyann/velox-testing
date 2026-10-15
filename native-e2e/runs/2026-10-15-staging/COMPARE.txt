@@ -1,0 +1,134 @@
+suite                                            control       gpu    strict    GPUfail  both fullGPU needFB  parity
+--------------------------------------------------------------------------------------------------------------------
+TestPrestoNativeAggregations                        0/30      4/30     24/30          4     0       6     20     87%
+TestPrestoNativeArrayFunctionQueries                 0/8       0/8       8/8          0     0       0      8    100%
+TestPrestoNativeBitwiseFunctionQueries               0/1       0/1       1/1          0     0       0      1    100%
+TestPrestoNativeCtasQueriesParquet                   0/2       1/2       2/2          1     0       0      1     50%
+TestPrestoNativeCteExecutionParquetSingleNode       0/49      1/49     49/49          1     0       0     48     98%
+TestPrestoNativeGeneralQueriesThrift                0/75     26/75     53/75         26     0      22     27     65%
+TestPrestoNativeJoinQueries                         0/15      4/15      7/15          4     0       8      3     73%
+TestPrestoNativeProbabilityFunctionQueries          0/11      0/11     11/11          0     0       0     11    100%
+TestPrestoNativeSystemQueries                        0/4       1/4       1/4          1     0       3      0     75%
+TestPrestoNativeTpchQueriesParquetUsingJSON         0/21      0/21      0/21          0     0      21      0    100%
+TestPrestoNativeWindowQueries                       0/27      0/27     22/27          0     0       5     22    100%
+
+====================================================================================================================
+tests: 243   passing: control 243, gpu 206, fully-on-GPU 65
+PARITY (gpu passes / control passes): 84.8%
+GPU failures (pass control, fail gpu w/ fallback):  37
+Fails in all arms (Prestissimo or test issue):      0
+Needs CPU fallback (pass gpu, fail gpu-strict):      141
+Counts are unique test methods; Surefire's 'Failures: N' counts lines.
+====================================================================================================================
+
+GPU failures — fail with cuDF on even though CPU fallback is allowed:
+  TestPrestoNativeAggregations                 testApproxMostFrequent(1)
+  TestPrestoNativeAggregations                 testApproxMostFrequent(2)
+  TestPrestoNativeAggregations                 testEmptyGroupingSets(1)
+  TestPrestoNativeAggregations                 testEmptyGroupingSets(2)
+  TestPrestoNativeCtasQueriesParquet           testCreateTableAsSelectBucketedTable
+  TestPrestoNativeCteExecutionParquetSingleNode testWrittenIntemediateByteLimit
+  TestPrestoNativeGeneralQueriesThrift         testAnalyzeStats
+  TestPrestoNativeGeneralQueriesThrift         testBucket
+  TestPrestoNativeGeneralQueriesThrift         testBucketedExecution
+  TestPrestoNativeGeneralQueriesThrift         testCast
+  TestPrestoNativeGeneralQueriesThrift         testColumnFilter
+  TestPrestoNativeGeneralQueriesThrift         testDereference
+  TestPrestoNativeGeneralQueriesThrift         testFileModifiedTimeHiddenColumn
+  TestPrestoNativeGeneralQueriesThrift         testFileSizeHiddenColumn
+  TestPrestoNativeGeneralQueriesThrift         testFiltersAndProjections1
+  TestPrestoNativeGeneralQueriesThrift         testFiltersAndProjections2
+  TestPrestoNativeGeneralQueriesThrift         testFiltersAndProjections3
+  TestPrestoNativeGeneralQueriesThrift         testFiltersAndProjections6
+  TestPrestoNativeGeneralQueriesThrift         testInvalidUuid
+  TestPrestoNativeGeneralQueriesThrift         testIsNullIsNotNull
+  TestPrestoNativeGeneralQueriesThrift         testKeyBasedSamplingInlined
+  TestPrestoNativeGeneralQueriesThrift         testPartitionedTable
+  TestPrestoNativeGeneralQueriesThrift         testPathHiddenColumn
+  TestPrestoNativeGeneralQueriesThrift         testReadTableWithTextfileFormat
+  TestPrestoNativeGeneralQueriesThrift         testReadTableWithUnsupportedJsonFormat
+  TestPrestoNativeGeneralQueriesThrift         testSelectFieldsWithCapitalLetters
+  TestPrestoNativeGeneralQueriesThrift         testStringFunctions
+  TestPrestoNativeGeneralQueriesThrift         testSystemTables
+  TestPrestoNativeGeneralQueriesThrift         testTimestampWithTimeZone
+  TestPrestoNativeGeneralQueriesThrift         testUnionAllInsert
+  TestPrestoNativeGeneralQueriesThrift         testUuid
+  TestPrestoNativeGeneralQueriesThrift         testWidthBucket
+  TestPrestoNativeJoinQueries                  testBucketedInnerJoin(1)
+  TestPrestoNativeJoinQueries                  testBucketedInnerJoin(2)
+  TestPrestoNativeJoinQueries                  testCrossJoin
+  TestPrestoNativeJoinQueries                  testJoinsWithoutEquiClause
+  TestPrestoNativeSystemQueries                testNodes
+
+Needs CPU fallback — pass on gpu, fail on gpu-strict (operators without a GPU path):
+  TestPrestoNativeAggregations                 testAggregations(1)
+  TestPrestoNativeAggregations                 testAggregations(2)
+  TestPrestoNativeAggregations                 testApproxDistinct(1)
+  TestPrestoNativeAggregations                 testApproxDistinct(2)
+  TestPrestoNativeAggregations                 testArbitrary(1)
+  TestPrestoNativeAggregations                 testArbitrary(2)
+  TestPrestoNativeAggregations                 testChecksum
+  TestPrestoNativeAggregations                 testCovariance
+  TestPrestoNativeAggregations                 … and 12 more
+  TestPrestoNativeArrayFunctionQueries         testArrayConcat
+  TestPrestoNativeArrayFunctionQueries         testArrayMatch
+  TestPrestoNativeArrayFunctionQueries         testArraySort
+  TestPrestoNativeArrayFunctionQueries         testArrayTrim
+  TestPrestoNativeArrayFunctionQueries         testArrayUnion
+  TestPrestoNativeArrayFunctionQueries         testFlatten
+  TestPrestoNativeArrayFunctionQueries         testRepeat
+  TestPrestoNativeArrayFunctionQueries         testShuffle
+  TestPrestoNativeBitwiseFunctionQueries       testBitCount
+  TestPrestoNativeCtasQueriesParquet           testCreateTableAsSelect
+  TestPrestoNativeCteExecutionParquetSingleNode testCTEMaterializationWithEnhancedScheduling
+  TestPrestoNativeCteExecutionParquetSingleNode testChainedCteProjectionAndFilterPushDown
+  TestPrestoNativeCteExecutionParquetSingleNode testChainedPersistentCtes
+  TestPrestoNativeCteExecutionParquetSingleNode testComplexChainOfDependentAndNestedPersistentCtes
+  TestPrestoNativeCteExecutionParquetSingleNode testComplexCommonFilterPushdown
+  TestPrestoNativeCteExecutionParquetSingleNode testComplexPersistentCteForCtasQueries
+  TestPrestoNativeCteExecutionParquetSingleNode testComplexPersistentCteForInsertQueries
+  TestPrestoNativeCteExecutionParquetSingleNode testComplexPersistentCteForViewQueries
+  TestPrestoNativeCteExecutionParquetSingleNode … and 40 more
+  TestPrestoNativeGeneralQueriesThrift         testAnalyzeStatsOnDecimals
+  TestPrestoNativeGeneralQueriesThrift         testArithmetic
+  TestPrestoNativeGeneralQueriesThrift         testArrayAndMapFunctions
+  TestPrestoNativeGeneralQueriesThrift         testBinaryFunctions
+  TestPrestoNativeGeneralQueriesThrift         testCatalogWithCacheEnabled
+  TestPrestoNativeGeneralQueriesThrift         testCorrelatedExistsSubqueries
+  TestPrestoNativeGeneralQueriesThrift         testDecimalApproximateAggregates
+  TestPrestoNativeGeneralQueriesThrift         testDecimalLiterals
+  TestPrestoNativeGeneralQueriesThrift         … and 19 more
+  TestPrestoNativeJoinQueries                  testMergeJoin
+  TestPrestoNativeJoinQueries                  testSemiJoin(1)
+  TestPrestoNativeJoinQueries                  testSemiJoin(2)
+  TestPrestoNativeProbabilityFunctionQueries   testBetaCDF
+  TestPrestoNativeProbabilityFunctionQueries   testBinomialCDF
+  TestPrestoNativeProbabilityFunctionQueries   testCauchyCDF
+  TestPrestoNativeProbabilityFunctionQueries   testChiSquaredCDF
+  TestPrestoNativeProbabilityFunctionQueries   testFCDF
+  TestPrestoNativeProbabilityFunctionQueries   testGammaCDF
+  TestPrestoNativeProbabilityFunctionQueries   testInverseBetaCDF
+  TestPrestoNativeProbabilityFunctionQueries   testLaplaceCDF
+  TestPrestoNativeProbabilityFunctionQueries   … and 3 more
+  TestPrestoNativeWindowQueries                testCumeDist
+  TestPrestoNativeWindowQueries                testDenseRank
+  TestPrestoNativeWindowQueries                testFirstValueOrderDate
+  TestPrestoNativeWindowQueries                testFirstValueOrderKey
+  TestPrestoNativeWindowQueries                testLagOrderDate
+  TestPrestoNativeWindowQueries                testLagOrderKey
+  TestPrestoNativeWindowQueries                testLagTotalPrice
+  TestPrestoNativeWindowQueries                testLastValueOrderDate
+  TestPrestoNativeWindowQueries                … and 14 more
+
+Operators that fell back to CPU in the gpu arm (events per suite):
+  TestPrestoNativeAggregations                 PartialAggregation=9792, FilterProject=3781, Aggregation=3754, LocalPartition=453, Unnest=128
+  TestPrestoNativeArrayFunctionQueries         FilterProject=3456
+  TestPrestoNativeBitwiseFunctionQueries       FilterProject=256
+  TestPrestoNativeCtasQueriesParquet           FilterProject=320, LocalPartition=64, TableWrite=60, TableWriteMerge=15
+  TestPrestoNativeCteExecutionParquetSingleNode TableWrite=432, TableWriteMerge=108
+  TestPrestoNativeGeneralQueriesThrift         FilterProject=15362, PartialAggregation=448, Unnest=448, Aggregation=195, LocalPartition=194, TopN=130, OrderBy=64, TableWrite=52, TableWriteMerge=13, RowNumber=3, LocalMerge=1
+  TestPrestoNativeJoinQueries                  FilterProject=258, HashProbe=128, HashBuild=128, MergeJoin=10, LocalPartition=2
+  TestPrestoNativeProbabilityFunctionQueries   FilterProject=1792
+  TestPrestoNativeWindowQueries                Window=18564, TopNRowNumber=256, RowNumber=193
+
+Fails in all arms — Prestissimo or test issue; not a GPU bug:

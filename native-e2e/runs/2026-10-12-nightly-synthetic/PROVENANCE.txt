@@ -1,8 +1,0 @@
-date: 2026-10-15T05:43:13Z
-image: presto-native-worker-gpu:knataraj sha256:b5c9a1a57baa62bc93aa1ad7fece02787eb462bbe378603501e3ea341a4fe096
-velox-testing.presto.sha=c6b9a8098eef7585097cec0f55f9624582de49bb
-velox-testing.velox.sha=e162d0b2150e16d3b4d16cb32613f18e3289698f
-presto: c6b9a8098eef7585097cec0f55f9624582de49bb (+ uncommitted:  1 file changed, 127 insertions(+), 2 deletions(-))
-velox:  e162d0b2150e16d3b4d16cb32613f18e3289698f (+ uncommitted:  6 files changed, 248 insertions(+), 13 deletions(-))
-allowed_cpu_ops: Exchange,MergeExchange
-note: SYNTHETIC copy of 2026-10-15 run with planted flips, for viewer review only

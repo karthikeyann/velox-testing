@@ -1,0 +1,3359 @@
+{
+  "schema": 1,
+  "run_id": "2026-10-15-staging",
+  "root": "/home/knataraj/native_e2e_real/2026-10-15-staging",
+  "arms": [
+    "control",
+    "gpu",
+    "gpu-strict"
+  ],
+  "provenance": {
+    "date": "2026-10-15T09:03:46Z",
+    "image": "ghcr.io/rapidsai/velox-testing-images:staging-images-presto-f2f6f86-velox-0f80642-gpu-cuda12.9-20261015-staging-amd64-vt-0610738-38701200069 sha256:d998fdefbcda8ba0286c1817b4a16731d22d5f8004c2ad8591db7ff0779343c4",
+    "velox-testing.presto.sha": "f2f6f86611e8e1584e3fc9b9503790e751407132",
+    "velox-testing.velox.sha": "0f8064257133a2c6f0cee354448bcb714b887929",
+    "presto": "f2f6f86611e8e1584e3fc9b9503790e751407132 (+ uncommitted: )",
+    "velox": "6c702140daabf9f1388a455723a020353fb9c1a0 (+ uncommitted: )",
+    "allowed_cpu_ops": "Exchange,MergeExchange"
+  },
+  "suites": {
+    "TestPrestoNativeAggregations": {
+      "run": 30,
+      "failures": {
+        "control": [],
+        "gpu": [
+          "testApproxMostFrequent(1)",
+          "testApproxMostFrequent(2)",
+          "testEmptyGroupingSets(1)",
+          "testEmptyGroupingSets(2)"
+        ],
+        "gpu-strict": [
+          "testAggregations(1)",
+          "testAggregations(2)",
+          "testApproxDistinct(1)",
+          "testApproxDistinct(2)",
+          "testApproxMostFrequent(1)",
+          "testApproxMostFrequent(2)",
+          "testArbitrary(1)",
+          "testArbitrary(2)",
+          "testChecksum",
+          "testCovariance",
+          "testDistinct",
+          "testEmptyGroupingSets(1)",
+          "testEmptyGroupingSets(2)",
+          "testMinMax",
+          "testMinMaxBy(1)",
+          "testMinMaxBy(2)",
+          "testMixedDistinctAggregations",
+          "testMultiMapAgg",
+          "testNaNValueAgg",
+          "testNumericHistogram",
+          "testReduceAgg(1)",
+          "testReduceAgg(2)",
+          "testStdDev",
+          "testVariance"
+        ]
+      },
+      "totals": {
+        "control": {
+          "run": 30,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "gpu": {
+          "run": 30,
+          "failures": 4,
+          "errors": 0,
+          "skipped": 0
+        },
+        "gpu-strict": {
+          "run": 30,
+          "failures": 24,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      "gpu_specific": [
+        "testApproxMostFrequent(1)",
+        "testApproxMostFrequent(2)",
+        "testEmptyGroupingSets(1)",
+        "testEmptyGroupingSets(2)"
+      ],
+      "fails_in_both": [],
+      "fully_on_gpu": 6,
+      "fallback_dependent": [
+        "testAggregations(1)",
+        "testAggregations(2)",
+        "testApproxDistinct(1)",
+        "testApproxDistinct(2)",
+        "testArbitrary(1)",
+        "testArbitrary(2)",
+        "testChecksum",
+        "testCovariance",
+        "testDistinct",
+        "testMinMax",
+        "testMinMaxBy(1)",
+        "testMinMaxBy(2)",
+        "testMixedDistinctAggregations",
+        "testMultiMapAgg",
+        "testNaNValueAgg",
+        "testNumericHistogram",
+        "testReduceAgg(1)",
+        "testReduceAgg(2)",
+        "testStdDev",
+        "testVariance"
+      ],
+      "parity": 0.8666666666666667,
+      "fallback_operators": {
+        "PartialAggregation": 9792,
+        "FilterProject": 3781,
+        "Aggregation": 3754,
+        "LocalPartition": 453,
+        "Unnest": 128
+      },
+      "allowlisted_operators": {
+        "Exchange": 20352
+      },
+      "tests": {
+        "testApproxDistinct(1)": {
+          "time": {
+            "control": 1.859,
+            "gpu": 2.147,
+            "gpu-strict": 0.608
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testApproxDistinct(2)": {
+          "time": {
+            "control": 1.308,
+            "gpu": 1.507,
+            "gpu-strict": 0.249
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testApproxMostFrequent(1)": {
+          "time": {
+            "control": 0.678,
+            "gpu": 0.111,
+            "gpu-strict": 0.084
+          },
+          "control": "pass",
+          "gpu": "fail",
+          "gpu-strict": "fail"
+        },
+        "testApproxMostFrequent(2)": {
+          "time": {
+            "control": 0.652,
+            "gpu": 0.091,
+            "gpu-strict": 0.05
+          },
+          "control": "pass",
+          "gpu": "fail",
+          "gpu-strict": "fail"
+        },
+        "testArbitrary(1)": {
+          "time": {
+            "control": 0.59,
+            "gpu": 0.868,
+            "gpu-strict": 0.058
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testArbitrary(2)": {
+          "time": {
+            "control": 0.572,
+            "gpu": 0.762,
+            "gpu-strict": 0.057
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testChecksum": {
+          "time": {
+            "control": 1.877,
+            "gpu": 2.511,
+            "gpu-strict": 0.05
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testAggregations(1)": {
+          "time": {
+            "control": 1.213,
+            "gpu": 3.017,
+            "gpu-strict": 0.108
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testCovariance": {
+          "time": {
+            "control": 0.97,
+            "gpu": 0.348,
+            "gpu-strict": 0.065
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testDistinct": {
+          "time": {
+            "control": 0.38,
+            "gpu": 0.425,
+            "gpu-strict": 0.058
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testEmptyGroupingSets(1)": {
+          "time": {
+            "control": 0.663,
+            "gpu": 0.226,
+            "gpu-strict": 0.325
+          },
+          "control": "pass",
+          "gpu": "fail",
+          "gpu-strict": "fail"
+        },
+        "testEmptyGroupingSets(2)": {
+          "time": {
+            "control": 0.692,
+            "gpu": 0.196,
+            "gpu-strict": 0.259
+          },
+          "control": "pass",
+          "gpu": "fail",
+          "gpu-strict": "fail"
+        },
+        "testGroupingSets(1)": {
+          "time": {
+            "control": 2.044,
+            "gpu": 2.496,
+            "gpu-strict": 0.131
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testGroupingSets(2)": {
+          "time": {
+            "control": 1.684,
+            "gpu": 2.295,
+            "gpu-strict": 0.065
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testAggregations(2)": {
+          "time": {
+            "control": 0.842,
+            "gpu": 1.041,
+            "gpu-strict": 1.225
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testMarkDistinct(1)": {
+          "time": {
+            "control": 0.858,
+            "gpu": 2.143,
+            "gpu-strict": 2.296
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testMarkDistinct(2)": {
+          "time": {
+            "control": 1.774,
+            "gpu": 0.914,
+            "gpu-strict": 1.953
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testMinMax": {
+          "time": {
+            "control": 0.548,
+            "gpu": 2.484,
+            "gpu-strict": 0.263
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testMixedDistinctAggregations": {
+          "time": {
+            "control": 0.728,
+            "gpu": 1.09,
+            "gpu-strict": 0.044
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testMultiMapAgg": {
+          "time": {
+            "control": 1.558,
+            "gpu": 1.514,
+            "gpu-strict": 0.047
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testNaNValueAgg": {
+          "time": {
+            "control": 0.246,
+            "gpu": 0.481,
+            "gpu-strict": 0.158
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testNumericHistogram": {
+          "time": {
+            "control": 0.983,
+            "gpu": 1.162,
+            "gpu-strict": 0.05
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testReduceAgg(1)": {
+          "time": {
+            "control": 0.93,
+            "gpu": 0.566,
+            "gpu-strict": 0.08
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testReduceAgg(2)": {
+          "time": {
+            "control": 0.901,
+            "gpu": 1.167,
+            "gpu-strict": 0.034
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testMinMaxBy(1)": {
+          "time": {
+            "control": 0.781,
+            "gpu": 0.818,
+            "gpu-strict": 0.066
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testStdDev": {
+          "time": {
+            "control": 0.345,
+            "gpu": 1.175,
+            "gpu-strict": 0.048
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testStreamingAggregation": {
+          "time": {
+            "control": 0.316,
+            "gpu": 0.364,
+            "gpu-strict": 0.407
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testSum": {
+          "time": {
+            "control": 0.658,
+            "gpu": 1.08,
+            "gpu-strict": 0.819
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testVariance": {
+          "time": {
+            "control": 0.808,
+            "gpu": 0.902,
+            "gpu-strict": 0.047
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testMinMaxBy(2)": {
+          "time": {
+            "control": 4.19,
+            "gpu": 2.527,
+            "gpu-strict": 0.043
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        }
+      }
+    },
+    "TestPrestoNativeArrayFunctionQueries": {
+      "run": 8,
+      "failures": {
+        "control": [],
+        "gpu": [],
+        "gpu-strict": [
+          "testArrayConcat",
+          "testArrayMatch",
+          "testArraySort",
+          "testArrayTrim",
+          "testArrayUnion",
+          "testFlatten",
+          "testRepeat",
+          "testShuffle"
+        ]
+      },
+      "totals": {
+        "control": {
+          "run": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "gpu": {
+          "run": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "gpu-strict": {
+          "run": 8,
+          "failures": 8,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      "gpu_specific": [],
+      "fails_in_both": [],
+      "fully_on_gpu": 0,
+      "fallback_dependent": [
+        "testArrayConcat",
+        "testArrayMatch",
+        "testArraySort",
+        "testArrayTrim",
+        "testArrayUnion",
+        "testFlatten",
+        "testRepeat",
+        "testShuffle"
+      ],
+      "parity": 1.0,
+      "fallback_operators": {
+        "FilterProject": 3456
+      },
+      "allowlisted_operators": {
+        "Exchange": 3456
+      },
+      "tests": {
+        "testArrayMatch": {
+          "time": {
+            "control": 2.551,
+            "gpu": 2.984,
+            "gpu-strict": 0.224
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testArraySort": {
+          "time": {
+            "control": 1.389,
+            "gpu": 1.44,
+            "gpu-strict": 0.056
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testArrayTrim": {
+          "time": {
+            "control": 1.126,
+            "gpu": 1.231,
+            "gpu-strict": 0.0
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testArrayUnion": {
+          "time": {
+            "control": 4.995,
+            "gpu": 5.149,
+            "gpu-strict": 0.004
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testFlatten": {
+          "time": {
+            "control": 2.405,
+            "gpu": 3.07,
+            "gpu-strict": 0.065
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testRepeat": {
+          "time": {
+            "control": 2.994,
+            "gpu": 3.36,
+            "gpu-strict": 0.05
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testShuffle": {
+          "time": {
+            "control": 0.723,
+            "gpu": 0.826,
+            "gpu-strict": 0.052
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testArrayConcat": {
+          "time": {
+            "control": 4.432,
+            "gpu": 4.264,
+            "gpu-strict": 0.003
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        }
+      }
+    },
+    "TestPrestoNativeBitwiseFunctionQueries": {
+      "run": 1,
+      "failures": {
+        "control": [],
+        "gpu": [],
+        "gpu-strict": [
+          "testBitCount"
+        ]
+      },
+      "totals": {
+        "control": {
+          "run": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "gpu": {
+          "run": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "gpu-strict": {
+          "run": 1,
+          "failures": 1,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      "gpu_specific": [],
+      "fails_in_both": [],
+      "fully_on_gpu": 0,
+      "fallback_dependent": [
+        "testBitCount"
+      ],
+      "parity": 1.0,
+      "fallback_operators": {
+        "FilterProject": 256
+      },
+      "allowlisted_operators": {
+        "Exchange": 256,
+        "MergeExchange": 4
+      },
+      "tests": {
+        "testBitCount": {
+          "time": {
+            "control": 2.075,
+            "gpu": 2.124,
+            "gpu-strict": 0.916
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        }
+      }
+    },
+    "TestPrestoNativeCtasQueriesParquet": {
+      "run": 2,
+      "failures": {
+        "control": [],
+        "gpu": [
+          "testCreateTableAsSelectBucketedTable"
+        ],
+        "gpu-strict": [
+          "testCreateTableAsSelect",
+          "testCreateTableAsSelectBucketedTable"
+        ]
+      },
+      "totals": {
+        "control": {
+          "run": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "gpu": {
+          "run": 2,
+          "failures": 1,
+          "errors": 0,
+          "skipped": 0
+        },
+        "gpu-strict": {
+          "run": 2,
+          "failures": 2,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      "gpu_specific": [
+        "testCreateTableAsSelectBucketedTable"
+      ],
+      "fails_in_both": [],
+      "fully_on_gpu": 0,
+      "fallback_dependent": [
+        "testCreateTableAsSelect"
+      ],
+      "parity": 0.5,
+      "fallback_operators": {
+        "FilterProject": 320,
+        "LocalPartition": 64,
+        "TableWrite": 60,
+        "TableWriteMerge": 15
+      },
+      "allowlisted_operators": {
+        "Exchange": 2432,
+        "MergeExchange": 2
+      },
+      "tests": {
+        "testCreateTableAsSelectBucketedTable": {
+          "time": {
+            "control": 2.354,
+            "gpu": 2.392,
+            "gpu-strict": 0.01
+          },
+          "control": "pass",
+          "gpu": "fail",
+          "gpu-strict": "fail"
+        },
+        "testCreateTableAsSelect": {
+          "time": {
+            "control": 4.555,
+            "gpu": 5.093,
+            "gpu-strict": 0.19
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        }
+      }
+    },
+    "TestPrestoNativeCteExecutionParquetSingleNode": {
+      "run": 49,
+      "failures": {
+        "control": [],
+        "gpu": [
+          "testWrittenIntemediateByteLimit"
+        ],
+        "gpu-strict": [
+          "testCTEMaterializationWithEnhancedScheduling",
+          "testChainedCteProjectionAndFilterPushDown",
+          "testChainedPersistentCtes",
+          "testComplexChainOfDependentAndNestedPersistentCtes",
+          "testComplexCommonFilterPushdown",
+          "testComplexPersistentCteForCtasQueries",
+          "testComplexPersistentCteForInsertQueries",
+          "testComplexPersistentCteForViewQueries",
+          "testComplexQuery1",
+          "testComplexQuery2",
+          "testComplexQuery3",
+          "testComplexRefinedCtesOutsideScope",
+          "testCteExecutionWhereChildPlanRemovedBySimplifyEmptyInputRule",
+          "testCteExecutionWhereOneCteRemovedBySimplifyEmptyInputRule",
+          "testCteFilterPushDown",
+          "testCteNoFilterPushDown",
+          "testCustomerOrderPatternAnalysis",
+          "testDependentPersistentCtes",
+          "testJoinAndAggregationWithPersistentCtes",
+          "testLowStockAnalysis",
+          "testMultipleIndependentPersistentCtes",
+          "testNestedCteWithSameName",
+          "testNestedPersistentCtes",
+          "testNestedPersistentCtes2",
+          "testPersistentCteForVarbinaryType",
+          "testPersistentCteMultipleColumns",
+          "testPersistentCteWithBigInt",
+          "testPersistentCteWithBoolean",
+          "testPersistentCteWithDecimal",
+          "testPersistentCteWithInteger",
+          "testPersistentCteWithMultipleDependentSubCtes",
+          "testPersistentCteWithReal",
+          "testPersistentCteWithSelfJoin",
+          "testPersistentCteWithSmallInt",
+          "testPersistentCteWithTinyInt",
+          "testPersistentCteWithUnion",
+          "testPersistentCteWithVarbinary",
+          "testPersistentCteWithWindowFunction",
+          "testRedefinedCteWithSameDefinitionDifferentBase",
+          "testRefinedCtesOutsideScope",
+          "testSimplePersistentCte",
+          "testSimplePersistentCteForCtasQueries",
+          "testSimplePersistentCteForInsertQueries",
+          "testSimplePersistentCteForViewQueries",
+          "testSimplePersistentCteMultipleUses",
+          "testSimplePersistentCteWithJoinInCteDef",
+          "testSupplierDataAnalysis",
+          "testTopCustomersByOrderValue",
+          "testWrittenIntemediateByteLimit"
+        ]
+      },
+      "totals": {
+        "control": {
+          "run": 49,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "gpu": {
+          "run": 49,
+          "failures": 1,
+          "errors": 0,
+          "skipped": 0
+        },
+        "gpu-strict": {
+          "run": 49,
+          "failures": 49,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      "gpu_specific": [
+        "testWrittenIntemediateByteLimit"
+      ],
+      "fails_in_both": [],
+      "fully_on_gpu": 0,
+      "fallback_dependent": [
+        "testCTEMaterializationWithEnhancedScheduling",
+        "testChainedCteProjectionAndFilterPushDown",
+        "testChainedPersistentCtes",
+        "testComplexChainOfDependentAndNestedPersistentCtes",
+        "testComplexCommonFilterPushdown",
+        "testComplexPersistentCteForCtasQueries",
+        "testComplexPersistentCteForInsertQueries",
+        "testComplexPersistentCteForViewQueries",
+        "testComplexQuery1",
+        "testComplexQuery2",
+        "testComplexQuery3",
+        "testComplexRefinedCtesOutsideScope",
+        "testCteExecutionWhereChildPlanRemovedBySimplifyEmptyInputRule",
+        "testCteExecutionWhereOneCteRemovedBySimplifyEmptyInputRule",
+        "testCteFilterPushDown",
+        "testCteNoFilterPushDown",
+        "testCustomerOrderPatternAnalysis",
+        "testDependentPersistentCtes",
+        "testJoinAndAggregationWithPersistentCtes",
+        "testLowStockAnalysis",
+        "testMultipleIndependentPersistentCtes",
+        "testNestedCteWithSameName",
+        "testNestedPersistentCtes",
+        "testNestedPersistentCtes2",
+        "testPersistentCteForVarbinaryType",
+        "testPersistentCteMultipleColumns",
+        "testPersistentCteWithBigInt",
+        "testPersistentCteWithBoolean",
+        "testPersistentCteWithDecimal",
+        "testPersistentCteWithInteger",
+        "testPersistentCteWithMultipleDependentSubCtes",
+        "testPersistentCteWithReal",
+        "testPersistentCteWithSelfJoin",
+        "testPersistentCteWithSmallInt",
+        "testPersistentCteWithTinyInt",
+        "testPersistentCteWithUnion",
+        "testPersistentCteWithVarbinary",
+        "testPersistentCteWithWindowFunction",
+        "testRedefinedCteWithSameDefinitionDifferentBase",
+        "testRefinedCtesOutsideScope",
+        "testSimplePersistentCte",
+        "testSimplePersistentCteForCtasQueries",
+        "testSimplePersistentCteForInsertQueries",
+        "testSimplePersistentCteForViewQueries",
+        "testSimplePersistentCteMultipleUses",
+        "testSimplePersistentCteWithJoinInCteDef",
+        "testSupplierDataAnalysis",
+        "testTopCustomersByOrderValue"
+      ],
+      "parity": 0.9795918367346939,
+      "fallback_operators": {
+        "TableWrite": 432,
+        "TableWriteMerge": 108
+      },
+      "allowlisted_operators": {},
+      "tests": {
+        "testChainedCteProjectionAndFilterPushDown": {
+          "time": {
+            "control": 0.618,
+            "gpu": 0.703,
+            "gpu-strict": 0.261
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testCTEMaterializationWithEnhancedScheduling": {
+          "time": {
+            "control": 0.618,
+            "gpu": 0.0,
+            "gpu-strict": 0.009
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testChainedPersistentCtes": {
+          "time": {
+            "control": 0.316,
+            "gpu": 0.335,
+            "gpu-strict": 0.114
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testComplexChainOfDependentAndNestedPersistentCtes": {
+          "time": {
+            "control": 0.474,
+            "gpu": 0.742,
+            "gpu-strict": 0.298
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testComplexCommonFilterPushdown": {
+          "time": {
+            "control": 0.328,
+            "gpu": 0.466,
+            "gpu-strict": 0.011
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testComplexPersistentCteForCtasQueries": {
+          "time": {
+            "control": 0.935,
+            "gpu": 1.705,
+            "gpu-strict": 0.23
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testComplexPersistentCteForInsertQueries": {
+          "time": {
+            "control": 0.227,
+            "gpu": 0.25,
+            "gpu-strict": 0.39
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testComplexPersistentCteForViewQueries": {
+          "time": {
+            "control": 0.654,
+            "gpu": 1.255,
+            "gpu-strict": 0.077
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testComplexQuery1": {
+          "time": {
+            "control": 0.183,
+            "gpu": 0.305,
+            "gpu-strict": 0.111
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testComplexQuery2": {
+          "time": {
+            "control": 0.51,
+            "gpu": 1.014,
+            "gpu-strict": 0.104
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testComplexQuery3": {
+          "time": {
+            "control": 0.203,
+            "gpu": 0.406,
+            "gpu-strict": 0.067
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testComplexRefinedCtesOutsideScope": {
+          "time": {
+            "control": 0.095,
+            "gpu": 0.091,
+            "gpu-strict": 0.013
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testCteExecutionWhereOneCteRemovedBySimplifyEmptyInputRule": {
+          "time": {
+            "control": 0.313,
+            "gpu": 0.408,
+            "gpu-strict": 0.02
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testCteExecutionWhereChildPlanRemovedBySimplifyEmptyInputRule": {
+          "time": {
+            "control": 0.053,
+            "gpu": 0.03,
+            "gpu-strict": 0.05
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testCteFilterPushDown": {
+          "time": {
+            "control": 0.209,
+            "gpu": 0.002,
+            "gpu-strict": 0.085
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testCteNoFilterPushDown": {
+          "time": {
+            "control": 0.016,
+            "gpu": 0.341,
+            "gpu-strict": 0.034
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testDependentPersistentCtes": {
+          "time": {
+            "control": 0.142,
+            "gpu": 0.225,
+            "gpu-strict": 0.054
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testCustomerOrderPatternAnalysis": {
+          "time": {
+            "control": 0.222,
+            "gpu": 0.265,
+            "gpu-strict": 0.035
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testJoinAndAggregationWithPersistentCtes": {
+          "time": {
+            "control": 0.027,
+            "gpu": 0.655,
+            "gpu-strict": 0.041
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testMultipleIndependentPersistentCtes": {
+          "time": {
+            "control": 0.183,
+            "gpu": 0.327,
+            "gpu-strict": 0.027
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testLowStockAnalysis": {
+          "time": {
+            "control": 0.037,
+            "gpu": 0.067,
+            "gpu-strict": 0.042
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testNestedPersistentCtes": {
+          "time": {
+            "control": 0.218,
+            "gpu": 0.432,
+            "gpu-strict": 0.087
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testNestedPersistentCtes2": {
+          "time": {
+            "control": 0.156,
+            "gpu": 0.198,
+            "gpu-strict": 0.032
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testNestedCteWithSameName": {
+          "time": {
+            "control": 0.015,
+            "gpu": 0.118,
+            "gpu-strict": 0.03
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testPersistentCteForVarbinaryType": {
+          "time": {
+            "control": 0.137,
+            "gpu": 0.166,
+            "gpu-strict": 0.008
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testPersistentCteWithBigInt": {
+          "time": {
+            "control": 0.101,
+            "gpu": 0.12,
+            "gpu-strict": 0.027
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testPersistentCteWithBoolean": {
+          "time": {
+            "control": 0.103,
+            "gpu": 0.104,
+            "gpu-strict": 0.006
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testPersistentCteMultipleColumns": {
+          "time": {
+            "control": 0.071,
+            "gpu": 0.069,
+            "gpu-strict": 0.041
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testPersistentCteWithDecimal": {
+          "time": {
+            "control": 0.071,
+            "gpu": 0.051,
+            "gpu-strict": 0.012
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testPersistentCteWithInteger": {
+          "time": {
+            "control": 0.051,
+            "gpu": 0.061,
+            "gpu-strict": 0.036
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testPersistentCteWithReal": {
+          "time": {
+            "control": 0.109,
+            "gpu": 0.113,
+            "gpu-strict": 0.068
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testPersistentCteWithSelfJoin": {
+          "time": {
+            "control": 0.197,
+            "gpu": 0.439,
+            "gpu-strict": 0.007
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testPersistentCteWithSmallInt": {
+          "time": {
+            "control": 0.087,
+            "gpu": 0.105,
+            "gpu-strict": 0.038
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testPersistentCteWithMultipleDependentSubCtes": {
+          "time": {
+            "control": 0.021,
+            "gpu": 0.031,
+            "gpu-strict": 0.016
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testPersistentCteWithTinyInt": {
+          "time": {
+            "control": 0.078,
+            "gpu": 0.013,
+            "gpu-strict": 0.027
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testPersistentCteWithVarbinary": {
+          "time": {
+            "control": 0.092,
+            "gpu": 0.118,
+            "gpu-strict": 0.005
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testPersistentCteWithUnion": {
+          "time": {
+            "control": 0.019,
+            "gpu": 0.234,
+            "gpu-strict": 0.032
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testPersistentCteWithWindowFunction": {
+          "time": {
+            "control": 0.159,
+            "gpu": 0.105,
+            "gpu-strict": 0.074
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testRedefinedCteWithSameDefinitionDifferentBase": {
+          "time": {
+            "control": 0.067,
+            "gpu": 0.267,
+            "gpu-strict": 0.047
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testRefinedCtesOutsideScope": {
+          "time": {
+            "control": 0.125,
+            "gpu": 0.049,
+            "gpu-strict": 0.013
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testSimplePersistentCte": {
+          "time": {
+            "control": 0.005,
+            "gpu": 0.132,
+            "gpu-strict": 0.041
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testSimplePersistentCteForCtasQueries": {
+          "time": {
+            "control": 0.279,
+            "gpu": 0.247,
+            "gpu-strict": 0.093
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testSimplePersistentCteForInsertQueries": {
+          "time": {
+            "control": 0.027,
+            "gpu": 0.183,
+            "gpu-strict": 0.015
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testSimplePersistentCteMultipleUses": {
+          "time": {
+            "control": 0.202,
+            "gpu": 0.307,
+            "gpu-strict": 0.059
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testSimplePersistentCteForViewQueries": {
+          "time": {
+            "control": 0.003,
+            "gpu": 0.105,
+            "gpu-strict": 0.028
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testSupplierDataAnalysis": {
+          "time": {
+            "control": 0.301,
+            "gpu": 0.043,
+            "gpu-strict": 0.003
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testTopCustomersByOrderValue": {
+          "time": {
+            "control": 0.225,
+            "gpu": 0.869,
+            "gpu-strict": 0.072
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testSimplePersistentCteWithJoinInCteDef": {
+          "time": {
+            "control": 0.073,
+            "gpu": 1.026,
+            "gpu-strict": 0.026
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testWrittenIntemediateByteLimit": {
+          "time": {
+            "control": 0.926,
+            "gpu": 0.359,
+            "gpu-strict": 0.055
+          },
+          "control": "pass",
+          "gpu": "fail",
+          "gpu-strict": "fail"
+        }
+      }
+    },
+    "TestPrestoNativeGeneralQueriesThrift": {
+      "run": 75,
+      "failures": {
+        "control": [],
+        "gpu": [
+          "testAnalyzeStats",
+          "testBucket",
+          "testBucketedExecution",
+          "testCast",
+          "testColumnFilter",
+          "testDereference",
+          "testFileModifiedTimeHiddenColumn",
+          "testFileSizeHiddenColumn",
+          "testFiltersAndProjections1",
+          "testFiltersAndProjections2",
+          "testFiltersAndProjections3",
+          "testFiltersAndProjections6",
+          "testInvalidUuid",
+          "testIsNullIsNotNull",
+          "testKeyBasedSamplingInlined",
+          "testPartitionedTable",
+          "testPathHiddenColumn",
+          "testReadTableWithTextfileFormat",
+          "testReadTableWithUnsupportedJsonFormat",
+          "testSelectFieldsWithCapitalLetters",
+          "testStringFunctions",
+          "testSystemTables",
+          "testTimestampWithTimeZone",
+          "testUnionAllInsert",
+          "testUuid",
+          "testWidthBucket"
+        ],
+        "gpu-strict": [
+          "testAnalyzeStats",
+          "testAnalyzeStatsOnDecimals",
+          "testArithmetic",
+          "testArrayAndMapFunctions",
+          "testBinaryFunctions",
+          "testBucket",
+          "testBucketedExecution",
+          "testCast",
+          "testCatalogWithCacheEnabled",
+          "testColumnFilter",
+          "testCorrelatedExistsSubqueries",
+          "testDecimalApproximateAggregates",
+          "testDecimalLiterals",
+          "testDereference",
+          "testFileModifiedTimeHiddenColumn",
+          "testFileSizeHiddenColumn",
+          "testFiltersAndProjections1",
+          "testFiltersAndProjections2",
+          "testFiltersAndProjections3",
+          "testFiltersAndProjections6",
+          "testGreatestLeast",
+          "testIPAddressIPPrefix",
+          "testIn",
+          "testInvalidUuid",
+          "testIsNullIsNotNull",
+          "testJsonExtract",
+          "testKeyBasedSamplingInlined",
+          "testLambda",
+          "testMergeEmptyHll",
+          "testOrderBy",
+          "testPad",
+          "testPartitionedTable",
+          "testPathHiddenColumn",
+          "testReadTableWithTextfileFormat",
+          "testReadTableWithUnsupportedJsonFormat",
+          "testRegexp",
+          "testRow",
+          "testSelectFieldsWithCapitalLetters",
+          "testSign",
+          "testStringFunctions",
+          "testSwitch",
+          "testSystemTables",
+          "testTimestampFunctions",
+          "testTimestampWithTimeZone",
+          "testTopN",
+          "testTry",
+          "testUnicodeInJson",
+          "testUnionAll",
+          "testUnionAllInsert",
+          "testUnnest",
+          "testUuid",
+          "testValues",
+          "testWidthBucket"
+        ]
+      },
+      "totals": {
+        "control": {
+          "run": 75,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "gpu": {
+          "run": 75,
+          "failures": 26,
+          "errors": 0,
+          "skipped": 0
+        },
+        "gpu-strict": {
+          "run": 75,
+          "failures": 53,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      "gpu_specific": [
+        "testAnalyzeStats",
+        "testBucket",
+        "testBucketedExecution",
+        "testCast",
+        "testColumnFilter",
+        "testDereference",
+        "testFileModifiedTimeHiddenColumn",
+        "testFileSizeHiddenColumn",
+        "testFiltersAndProjections1",
+        "testFiltersAndProjections2",
+        "testFiltersAndProjections3",
+        "testFiltersAndProjections6",
+        "testInvalidUuid",
+        "testIsNullIsNotNull",
+        "testKeyBasedSamplingInlined",
+        "testPartitionedTable",
+        "testPathHiddenColumn",
+        "testReadTableWithTextfileFormat",
+        "testReadTableWithUnsupportedJsonFormat",
+        "testSelectFieldsWithCapitalLetters",
+        "testStringFunctions",
+        "testSystemTables",
+        "testTimestampWithTimeZone",
+        "testUnionAllInsert",
+        "testUuid",
+        "testWidthBucket"
+      ],
+      "fails_in_both": [],
+      "fully_on_gpu": 22,
+      "fallback_dependent": [
+        "testAnalyzeStatsOnDecimals",
+        "testArithmetic",
+        "testArrayAndMapFunctions",
+        "testBinaryFunctions",
+        "testCatalogWithCacheEnabled",
+        "testCorrelatedExistsSubqueries",
+        "testDecimalApproximateAggregates",
+        "testDecimalLiterals",
+        "testGreatestLeast",
+        "testIPAddressIPPrefix",
+        "testIn",
+        "testJsonExtract",
+        "testLambda",
+        "testMergeEmptyHll",
+        "testOrderBy",
+        "testPad",
+        "testRegexp",
+        "testRow",
+        "testSign",
+        "testSwitch",
+        "testTimestampFunctions",
+        "testTopN",
+        "testTry",
+        "testUnicodeInJson",
+        "testUnionAll",
+        "testUnnest",
+        "testValues"
+      ],
+      "parity": 0.6533333333333333,
+      "fallback_operators": {
+        "FilterProject": 15362,
+        "PartialAggregation": 448,
+        "Unnest": 448,
+        "Aggregation": 195,
+        "LocalPartition": 194,
+        "TopN": 130,
+        "OrderBy": 64,
+        "TableWrite": 52,
+        "TableWriteMerge": 13,
+        "RowNumber": 3,
+        "LocalMerge": 1
+      },
+      "allowlisted_operators": {
+        "Exchange": 24384,
+        "MergeExchange": 20
+      },
+      "tests": {
+        "testAnalyzeStatsOnDecimals": {
+          "time": {
+            "control": 0.362,
+            "gpu": 0.617,
+            "gpu-strict": 0.009
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testAnalyzeStats": {
+          "time": {
+            "control": 0.604,
+            "gpu": 0.317,
+            "gpu-strict": 0.284
+          },
+          "control": "pass",
+          "gpu": "fail",
+          "gpu-strict": "fail"
+        },
+        "testArithmetic": {
+          "time": {
+            "control": 0.858,
+            "gpu": 1.524,
+            "gpu-strict": 1.459
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testArrayAndMapFunctions": {
+          "time": {
+            "control": 4.768,
+            "gpu": 4.925,
+            "gpu-strict": 0.083
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testBucket": {
+          "time": {
+            "control": 0.298,
+            "gpu": 0.1,
+            "gpu-strict": 0.135
+          },
+          "control": "pass",
+          "gpu": "fail",
+          "gpu-strict": "fail"
+        },
+        "testBinaryFunctions": {
+          "time": {
+            "control": 2.168,
+            "gpu": 2.139,
+            "gpu-strict": 0.048
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testCast": {
+          "time": {
+            "control": 10.765,
+            "gpu": 1.426,
+            "gpu-strict": 0.06
+          },
+          "control": "pass",
+          "gpu": "fail",
+          "gpu-strict": "fail"
+        },
+        "testCatalogWithCacheEnabled": {
+          "time": {
+            "control": 0.165,
+            "gpu": 0.208,
+            "gpu-strict": 0.144
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testColumnFilter": {
+          "time": {
+            "control": 0.718,
+            "gpu": 0.174,
+            "gpu-strict": 0.052
+          },
+          "control": "pass",
+          "gpu": "fail",
+          "gpu-strict": "fail"
+        },
+        "testBucketedExecution": {
+          "time": {
+            "control": 0.554,
+            "gpu": 1.743,
+            "gpu-strict": 0.111
+          },
+          "control": "pass",
+          "gpu": "fail",
+          "gpu-strict": "fail"
+        },
+        "testDateFilter": {
+          "time": {
+            "control": 0.177,
+            "gpu": 0.291,
+            "gpu-strict": 0.127
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testDecimalApproximateAggregates": {
+          "time": {
+            "control": 0.507,
+            "gpu": 0.722,
+            "gpu-strict": 0.374
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testDecimalArithmetic": {
+          "time": {
+            "control": 0.767,
+            "gpu": 1.177,
+            "gpu-strict": 0.819
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testDecimalLiterals": {
+          "time": {
+            "control": 0.34,
+            "gpu": 0.356,
+            "gpu-strict": 0.053
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testDecimalLogicalFunctions": {
+          "time": {
+            "control": 0.762,
+            "gpu": 0.806,
+            "gpu-strict": 0.073
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testDecimalRangeFilters": {
+          "time": {
+            "control": 1.246,
+            "gpu": 1.698,
+            "gpu-strict": 0.48
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testCorrelatedExistsSubqueries": {
+          "time": {
+            "control": 0.565,
+            "gpu": 0.176,
+            "gpu-strict": 0.266
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testDereference": {
+          "time": {
+            "control": 0.565,
+            "gpu": 0.65,
+            "gpu-strict": 0.059
+          },
+          "control": "pass",
+          "gpu": "fail",
+          "gpu-strict": "fail"
+        },
+        "testEmptyTable": {
+          "time": {
+            "control": 0.073,
+            "gpu": 0.088,
+            "gpu-strict": 0.12
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testFileModifiedTimeHiddenColumn": {
+          "time": {
+            "control": 0.198,
+            "gpu": 0.044,
+            "gpu-strict": 0.051
+          },
+          "control": "pass",
+          "gpu": "fail",
+          "gpu-strict": "fail"
+        },
+        "testFileSizeHiddenColumn": {
+          "time": {
+            "control": 0.186,
+            "gpu": 0.051,
+            "gpu-strict": 0.044
+          },
+          "control": "pass",
+          "gpu": "fail",
+          "gpu-strict": "fail"
+        },
+        "testDistributedSortSingleNode": {
+          "time": {
+            "control": 0.308,
+            "gpu": 0.58,
+            "gpu-strict": 1.033
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testFiltersAndProjections1": {
+          "time": {
+            "control": 0.673,
+            "gpu": 0.141,
+            "gpu-strict": 0.1
+          },
+          "control": "pass",
+          "gpu": "fail",
+          "gpu-strict": "fail"
+        },
+        "testFiltersAndProjections2": {
+          "time": {
+            "control": 0.252,
+            "gpu": 0.906,
+            "gpu-strict": 0.346
+          },
+          "control": "pass",
+          "gpu": "fail",
+          "gpu-strict": "fail"
+        },
+        "testFiltersAndProjections4": {
+          "time": {
+            "control": 7.46,
+            "gpu": 7.339,
+            "gpu-strict": 6.089
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testFiltersAndProjections3": {
+          "time": {
+            "control": 9.125,
+            "gpu": 4.653,
+            "gpu-strict": 0.855
+          },
+          "control": "pass",
+          "gpu": "fail",
+          "gpu-strict": "fail"
+        },
+        "testFiltersAndProjections6": {
+          "time": {
+            "control": 2.376,
+            "gpu": 2.019,
+            "gpu-strict": 1.629
+          },
+          "control": "pass",
+          "gpu": "fail",
+          "gpu-strict": "fail"
+        },
+        "testGreatestLeast": {
+          "time": {
+            "control": 0.6,
+            "gpu": 0.861,
+            "gpu-strict": 0.027
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testIPAddressIPPrefix": {
+          "time": {
+            "control": 0.159,
+            "gpu": 0.174,
+            "gpu-strict": 0.09
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testIf": {
+          "time": {
+            "control": 0.71,
+            "gpu": 0.751,
+            "gpu-strict": 0.774
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testIn": {
+          "time": {
+            "control": 0.422,
+            "gpu": 0.318,
+            "gpu-strict": 0.034
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testInformationSchemaTables": {
+          "time": {
+            "control": 0.228,
+            "gpu": 0.141,
+            "gpu-strict": 0.127
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testInvalidUuid": {
+          "time": {
+            "control": 0.215,
+            "gpu": 0.197,
+            "gpu-strict": 0.034
+          },
+          "control": "pass",
+          "gpu": "fail",
+          "gpu-strict": "fail"
+        },
+        "testIsNullIsNotNull": {
+          "time": {
+            "control": 0.8,
+            "gpu": 0.447,
+            "gpu-strict": 0.377
+          },
+          "control": "pass",
+          "gpu": "fail",
+          "gpu-strict": "fail"
+        },
+        "testJsonExtract": {
+          "time": {
+            "control": 0.083,
+            "gpu": 0.121,
+            "gpu-strict": 0.045
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testKeyBasedSamplingInlined": {
+          "time": {
+            "control": 0.082,
+            "gpu": 0.091,
+            "gpu-strict": 0.119
+          },
+          "control": "pass",
+          "gpu": "fail",
+          "gpu-strict": "fail"
+        },
+        "testLambda": {
+          "time": {
+            "control": 0.195,
+            "gpu": 0.241,
+            "gpu-strict": 0.035
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testLimit": {
+          "time": {
+            "control": 1.171,
+            "gpu": 1.545,
+            "gpu-strict": 1.231
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testLiterals": {
+          "time": {
+            "control": 0.323,
+            "gpu": 0.3,
+            "gpu-strict": 0.47
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testMergeEmptyHll": {
+          "time": {
+            "control": 0.227,
+            "gpu": 0.325,
+            "gpu-strict": 0.039
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testNullIf": {
+          "time": {
+            "control": 2.513,
+            "gpu": 3.267,
+            "gpu-strict": 3.423
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testOrderBy": {
+          "time": {
+            "control": 5.384,
+            "gpu": 5.354,
+            "gpu-strict": 4.815
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testPad": {
+          "time": {
+            "control": 0.12,
+            "gpu": 0.179,
+            "gpu-strict": 0.027
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testPartitionedTable": {
+          "time": {
+            "control": 0.444,
+            "gpu": 0.051,
+            "gpu-strict": 0.048
+          },
+          "control": "pass",
+          "gpu": "fail",
+          "gpu-strict": "fail"
+        },
+        "testPathHiddenColumn": {
+          "time": {
+            "control": 0.17,
+            "gpu": 0.045,
+            "gpu-strict": 0.046
+          },
+          "control": "pass",
+          "gpu": "fail",
+          "gpu-strict": "fail"
+        },
+        "testPrestoBenchTables": {
+          "time": {
+            "control": 0.669,
+            "gpu": 1.213,
+            "gpu-strict": 1.248
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testReadTableWithCustomSerdeTextfile": {
+          "time": {
+            "control": 0.563,
+            "gpu": 0.675,
+            "gpu-strict": 0.736
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testReadTableWithTextfileFormat": {
+          "time": {
+            "control": 0.365,
+            "gpu": 0.043,
+            "gpu-strict": 0.04
+          },
+          "control": "pass",
+          "gpu": "fail",
+          "gpu-strict": "fail"
+        },
+        "testReadTableWithUnsupportedJsonFormat": {
+          "time": {
+            "control": 0.028,
+            "gpu": 0.051,
+            "gpu-strict": 0.042
+          },
+          "control": "pass",
+          "gpu": "fail",
+          "gpu-strict": "fail"
+        },
+        "testRegexp": {
+          "time": {
+            "control": 0.327,
+            "gpu": 0.421,
+            "gpu-strict": 0.062
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testRow": {
+          "time": {
+            "control": 0.123,
+            "gpu": 0.166,
+            "gpu-strict": 0.033
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testRowWiseExchange": {
+          "time": {
+            "control": 1.052,
+            "gpu": 1.472,
+            "gpu-strict": 1.316
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testRowWithFieldNames": {
+          "time": {
+            "control": 0.36,
+            "gpu": 0.508,
+            "gpu-strict": 0.458
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testSelectFieldsWithCapitalLetters": {
+          "time": {
+            "control": 0.152,
+            "gpu": 0.215,
+            "gpu-strict": 0.072
+          },
+          "control": "pass",
+          "gpu": "fail",
+          "gpu-strict": "fail"
+        },
+        "testSetSessionJavaWorkerSessionProperty": {
+          "time": {
+            "control": 0.013,
+            "gpu": 0.014,
+            "gpu-strict": 0.014
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testFiltersAndProjections5": {
+          "time": {
+            "control": 0.748,
+            "gpu": 1.206,
+            "gpu-strict": 3.077
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testShowSessionWithoutJavaSessionProperties": {
+          "time": {
+            "control": 0.452,
+            "gpu": 0.444,
+            "gpu-strict": 0.566
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testShowAndDescribe": {
+          "time": {
+            "control": 0.334,
+            "gpu": 1.52,
+            "gpu-strict": 1.543
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testSign": {
+          "time": {
+            "control": 0.16,
+            "gpu": 0.604,
+            "gpu-strict": 0.034
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testSubqueries": {
+          "time": {
+            "control": 0.262,
+            "gpu": 0.462,
+            "gpu-strict": 0.491
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testSwitch": {
+          "time": {
+            "control": 0.946,
+            "gpu": 1.573,
+            "gpu-strict": 0.03
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testSystemTables": {
+          "time": {
+            "control": 0.695,
+            "gpu": 0.473,
+            "gpu-strict": 0.065
+          },
+          "control": "pass",
+          "gpu": "fail",
+          "gpu-strict": "fail"
+        },
+        "testTableSample": {
+          "time": {
+            "control": 0.282,
+            "gpu": 2.716,
+            "gpu-strict": 2.619
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testTimestampFunctions": {
+          "time": {
+            "control": 1.855,
+            "gpu": 2.015,
+            "gpu-strict": 0.035
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testTimestampWithTimeZone": {
+          "time": {
+            "control": 3.675,
+            "gpu": 4.101,
+            "gpu-strict": 0.039
+          },
+          "control": "pass",
+          "gpu": "fail",
+          "gpu-strict": "fail"
+        },
+        "testTopN": {
+          "time": {
+            "control": 0.982,
+            "gpu": 0.984,
+            "gpu-strict": 0.908
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testTry": {
+          "time": {
+            "control": 0.856,
+            "gpu": 0.85,
+            "gpu-strict": 0.04
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testUnicodeInJson": {
+          "time": {
+            "control": 3.113,
+            "gpu": 1.109,
+            "gpu-strict": 0.081
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testUnionAll": {
+          "time": {
+            "control": 0.423,
+            "gpu": 0.615,
+            "gpu-strict": 0.45
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testUnionAllInsert": {
+          "time": {
+            "control": 0.286,
+            "gpu": 0.211,
+            "gpu-strict": 0.136
+          },
+          "control": "pass",
+          "gpu": "fail",
+          "gpu-strict": "fail"
+        },
+        "testUnnest": {
+          "time": {
+            "control": 2.942,
+            "gpu": 0.112,
+            "gpu-strict": 0.027
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testStringFunctions": {
+          "time": {
+            "control": 0.965,
+            "gpu": 1.958,
+            "gpu-strict": 0.042
+          },
+          "control": "pass",
+          "gpu": "fail",
+          "gpu-strict": "fail"
+        },
+        "testUuid": {
+          "time": {
+            "control": 0.013,
+            "gpu": 0.318,
+            "gpu-strict": 0.017
+          },
+          "control": "pass",
+          "gpu": "fail",
+          "gpu-strict": "fail"
+        },
+        "testWidthBucket": {
+          "time": {
+            "control": 0.154,
+            "gpu": 0.06,
+            "gpu-strict": 0.037
+          },
+          "control": "pass",
+          "gpu": "fail",
+          "gpu-strict": "fail"
+        },
+        "testValues": {
+          "time": {
+            "control": 0.968,
+            "gpu": 1.193,
+            "gpu-strict": 0.021
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        }
+      }
+    },
+    "TestPrestoNativeJoinQueries": {
+      "run": 15,
+      "failures": {
+        "control": [],
+        "gpu": [
+          "testBucketedInnerJoin(1)",
+          "testBucketedInnerJoin(2)",
+          "testCrossJoin",
+          "testJoinsWithoutEquiClause"
+        ],
+        "gpu-strict": [
+          "testBucketedInnerJoin(1)",
+          "testBucketedInnerJoin(2)",
+          "testCrossJoin",
+          "testJoinsWithoutEquiClause",
+          "testMergeJoin",
+          "testSemiJoin(1)",
+          "testSemiJoin(2)"
+        ]
+      },
+      "totals": {
+        "control": {
+          "run": 15,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "gpu": {
+          "run": 15,
+          "failures": 4,
+          "errors": 0,
+          "skipped": 0
+        },
+        "gpu-strict": {
+          "run": 15,
+          "failures": 7,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      "gpu_specific": [
+        "testBucketedInnerJoin(1)",
+        "testBucketedInnerJoin(2)",
+        "testCrossJoin",
+        "testJoinsWithoutEquiClause"
+      ],
+      "fails_in_both": [],
+      "fully_on_gpu": 8,
+      "fallback_dependent": [
+        "testMergeJoin",
+        "testSemiJoin(1)",
+        "testSemiJoin(2)"
+      ],
+      "parity": 0.7333333333333333,
+      "fallback_operators": {
+        "FilterProject": 258,
+        "HashProbe": 128,
+        "HashBuild": 128,
+        "MergeJoin": 10,
+        "LocalPartition": 2
+      },
+      "allowlisted_operators": {
+        "Exchange": 5376
+      },
+      "tests": {
+        "testBucketedInnerJoin(1)": {
+          "time": {
+            "control": 1.936,
+            "gpu": 1.149,
+            "gpu-strict": 1.208
+          },
+          "control": "pass",
+          "gpu": "fail",
+          "gpu-strict": "fail"
+        },
+        "testBucketedInnerJoin(2)": {
+          "time": {
+            "control": 0.853,
+            "gpu": 0.405,
+            "gpu-strict": 0.416
+          },
+          "control": "pass",
+          "gpu": "fail",
+          "gpu-strict": "fail"
+        },
+        "testCrossJoin": {
+          "time": {
+            "control": 0.982,
+            "gpu": 1.041,
+            "gpu-strict": 1.111
+          },
+          "control": "pass",
+          "gpu": "fail",
+          "gpu-strict": "fail"
+        },
+        "testInnerJoin(1)": {
+          "time": {
+            "control": 1.865,
+            "gpu": 1.773,
+            "gpu-strict": 1.771
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testAntiJoin(1)": {
+          "time": {
+            "control": 0.836,
+            "gpu": 0.016,
+            "gpu-strict": 0.46
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testInnerJoin(2)": {
+          "time": {
+            "control": 0.405,
+            "gpu": 1.653,
+            "gpu-strict": 1.714
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testJoinsWithoutEquiClause": {
+          "time": {
+            "control": 0.876,
+            "gpu": 0.248,
+            "gpu-strict": 0.283
+          },
+          "control": "pass",
+          "gpu": "fail",
+          "gpu-strict": "fail"
+        },
+        "testLeftJoin(1)": {
+          "time": {
+            "control": 1.679,
+            "gpu": 2.146,
+            "gpu-strict": 2.124
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testLeftJoin(2)": {
+          "time": {
+            "control": 1.825,
+            "gpu": 2.005,
+            "gpu-strict": 1.631
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testAntiJoin(2)": {
+          "time": {
+            "control": 0.122,
+            "gpu": 0.126,
+            "gpu-strict": 0.756
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testRightJoinPartitioned": {
+          "time": {
+            "control": 0.277,
+            "gpu": 0.437,
+            "gpu-strict": 0.447
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testMergeJoin": {
+          "time": {
+            "control": 1.607,
+            "gpu": 0.629,
+            "gpu-strict": 0.093
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testSemiJoinPlan": {
+          "time": {
+            "control": 0.083,
+            "gpu": 0.057,
+            "gpu-strict": 0.054
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testSemiJoin(1)": {
+          "time": {
+            "control": 5.106,
+            "gpu": 5.544,
+            "gpu-strict": 5.307
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testSemiJoin(2)": {
+          "time": {
+            "control": 4.461,
+            "gpu": 4.791,
+            "gpu-strict": 4.67
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        }
+      }
+    },
+    "TestPrestoNativeProbabilityFunctionQueries": {
+      "run": 11,
+      "failures": {
+        "control": [],
+        "gpu": [],
+        "gpu-strict": [
+          "testBetaCDF",
+          "testBinomialCDF",
+          "testCauchyCDF",
+          "testChiSquaredCDF",
+          "testFCDF",
+          "testGammaCDF",
+          "testInverseBetaCDF",
+          "testLaplaceCDF",
+          "testNormalCDF",
+          "testPoissonCDF",
+          "testWilsonInterval"
+        ]
+      },
+      "totals": {
+        "control": {
+          "run": 11,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "gpu": {
+          "run": 11,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "gpu-strict": {
+          "run": 11,
+          "failures": 11,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      "gpu_specific": [],
+      "fails_in_both": [],
+      "fully_on_gpu": 0,
+      "fallback_dependent": [
+        "testBetaCDF",
+        "testBinomialCDF",
+        "testCauchyCDF",
+        "testChiSquaredCDF",
+        "testFCDF",
+        "testGammaCDF",
+        "testInverseBetaCDF",
+        "testLaplaceCDF",
+        "testNormalCDF",
+        "testPoissonCDF",
+        "testWilsonInterval"
+      ],
+      "parity": 1.0,
+      "fallback_operators": {
+        "FilterProject": 1792
+      },
+      "allowlisted_operators": {
+        "Exchange": 1792
+      },
+      "tests": {
+        "testBetaCDF": {
+          "time": {
+            "control": 0.5,
+            "gpu": 0.57,
+            "gpu-strict": 0.237
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testBinomialCDF": {
+          "time": {
+            "control": 0.156,
+            "gpu": 0.188,
+            "gpu-strict": 0.237
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testCauchyCDF": {
+          "time": {
+            "control": 0.293,
+            "gpu": 0.306,
+            "gpu-strict": 0.06
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testChiSquaredCDF": {
+          "time": {
+            "control": 0.04,
+            "gpu": 0.067,
+            "gpu-strict": 0.028
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testFCDF": {
+          "time": {
+            "control": 0.316,
+            "gpu": 0.34,
+            "gpu-strict": 0.031
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testGammaCDF": {
+          "time": {
+            "control": 0.035,
+            "gpu": 0.065,
+            "gpu-strict": 0.033
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testInverseBetaCDF": {
+          "time": {
+            "control": 0.286,
+            "gpu": 0.309,
+            "gpu-strict": 0.026
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testLaplaceCDF": {
+          "time": {
+            "control": 0.039,
+            "gpu": 0.059,
+            "gpu-strict": 0.044
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testNormalCDF": {
+          "time": {
+            "control": 0.226,
+            "gpu": 0.266,
+            "gpu-strict": 0.007
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testWilsonInterval": {
+          "time": {
+            "control": 0.462,
+            "gpu": 0.563,
+            "gpu-strict": 0.067
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testPoissonCDF": {
+          "time": {
+            "control": 0.774,
+            "gpu": 0.614,
+            "gpu-strict": 0.06
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        }
+      }
+    },
+    "TestPrestoNativeSystemQueries": {
+      "run": 4,
+      "failures": {
+        "control": [],
+        "gpu": [
+          "testNodes"
+        ],
+        "gpu-strict": [
+          "testNodes"
+        ]
+      },
+      "totals": {
+        "control": {
+          "run": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "gpu": {
+          "run": 4,
+          "failures": 1,
+          "errors": 0,
+          "skipped": 0
+        },
+        "gpu-strict": {
+          "run": 4,
+          "failures": 1,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      "gpu_specific": [
+        "testNodes"
+      ],
+      "fails_in_both": [],
+      "fully_on_gpu": 3,
+      "fallback_dependent": [],
+      "parity": 0.75,
+      "fallback_operators": {},
+      "allowlisted_operators": {
+        "Exchange": 320
+      },
+      "tests": {
+        "testQueries": {
+          "time": {
+            "control": 1.012,
+            "gpu": 1.028,
+            "gpu-strict": 1.03
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testNodes": {
+          "time": {
+            "control": 1.012,
+            "gpu": 1.028,
+            "gpu-strict": 0.002
+          },
+          "control": "pass",
+          "gpu": "fail",
+          "gpu-strict": "fail"
+        },
+        "testTransactions": {
+          "time": {
+            "control": 0.108,
+            "gpu": 0.086,
+            "gpu-strict": 0.091
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testTasks": {
+          "time": {
+            "control": 0.29,
+            "gpu": 0.411,
+            "gpu-strict": 0.417
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        }
+      }
+    },
+    "TestPrestoNativeTpchQueriesParquetUsingJSON": {
+      "run": 21,
+      "failures": {
+        "control": [],
+        "gpu": [],
+        "gpu-strict": []
+      },
+      "totals": {
+        "control": {
+          "run": 21,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "gpu": {
+          "run": 21,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "gpu-strict": {
+          "run": 21,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      "gpu_specific": [],
+      "fails_in_both": [],
+      "fully_on_gpu": 21,
+      "fallback_dependent": [],
+      "parity": 1.0,
+      "fallback_operators": {},
+      "allowlisted_operators": {
+        "Exchange": 10048,
+        "MergeExchange": 13
+      },
+      "tests": {
+        "testTpchQ1": {
+          "time": {
+            "control": 1.222,
+            "gpu": 1.027,
+            "gpu-strict": 1.201
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testTpchQ10": {
+          "time": {
+            "control": 0.003,
+            "gpu": 0.505,
+            "gpu-strict": 0.335
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testTpchQ12": {
+          "time": {
+            "control": 0.69,
+            "gpu": 0.269,
+            "gpu-strict": 0.156
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testTpchQ11": {
+          "time": {
+            "control": 0.012,
+            "gpu": 0.566,
+            "gpu-strict": 0.79
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testTpchQ14": {
+          "time": {
+            "control": 0.436,
+            "gpu": 0.056,
+            "gpu-strict": 0.036
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testTpchQ13": {
+          "time": {
+            "control": 0.017,
+            "gpu": 0.344,
+            "gpu-strict": 0.517
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testTpchQ15": {
+          "time": {
+            "control": 0.216,
+            "gpu": 0.471,
+            "gpu-strict": 0.617
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testTpchQ16": {
+          "time": {
+            "control": 0.379,
+            "gpu": 0.763,
+            "gpu-strict": 0.74
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testTpchQ19": {
+          "time": {
+            "control": 0.57,
+            "gpu": 0.343,
+            "gpu-strict": 0.091
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testTpchQ18": {
+          "time": {
+            "control": 0.046,
+            "gpu": 0.336,
+            "gpu-strict": 0.546
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testTpchQ20": {
+          "time": {
+            "control": 0.782,
+            "gpu": 0.16,
+            "gpu-strict": 1.255
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testTpchQ2": {
+          "time": {
+            "control": 0.084,
+            "gpu": 1.002,
+            "gpu-strict": 0.101
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testTpchQ22": {
+          "time": {
+            "control": 0.43,
+            "gpu": 0.607,
+            "gpu-strict": 0.609
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testTpchQ3": {
+          "time": {
+            "control": 0.719,
+            "gpu": 1.106,
+            "gpu-strict": 1.305
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testTpchQ21": {
+          "time": {
+            "control": 0.218,
+            "gpu": 0.434,
+            "gpu-strict": 0.325
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testTpchQ4": {
+          "time": {
+            "control": 0.128,
+            "gpu": 0.052,
+            "gpu-strict": 0.188
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testTpchQ6": {
+          "time": {
+            "control": 0.332,
+            "gpu": 0.228,
+            "gpu-strict": 0.41
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testTpchQ5": {
+          "time": {
+            "control": 0.261,
+            "gpu": 0.982,
+            "gpu-strict": 0.532
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testTpchQ7": {
+          "time": {
+            "control": 0.419,
+            "gpu": 0.061,
+            "gpu-strict": 0.615
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testTpchQ9": {
+          "time": {
+            "control": 0.704,
+            "gpu": 1.304,
+            "gpu-strict": 1.583
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testTpchQ8": {
+          "time": {
+            "control": 1.227,
+            "gpu": 1.783,
+            "gpu-strict": 1.673
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        }
+      }
+    },
+    "TestPrestoNativeWindowQueries": {
+      "run": 27,
+      "failures": {
+        "control": [],
+        "gpu": [],
+        "gpu-strict": [
+          "testCumeDist",
+          "testDenseRank",
+          "testFirstValueOrderDate",
+          "testFirstValueOrderKey",
+          "testLagOrderDate",
+          "testLagOrderKey",
+          "testLagTotalPrice",
+          "testLastValueOrderDate",
+          "testLastValueOrderKey",
+          "testLeadOrderDate",
+          "testLeadOrderKey",
+          "testLeadTotalPrice",
+          "testNthValueOrderDate",
+          "testNthValueOrderKey",
+          "testOverlappingPartitionAndSortingKeys_4",
+          "testPercentRank",
+          "testRank",
+          "testRowNumber",
+          "testRowNumberWithFilter",
+          "testTopNDenseRank",
+          "testTopNRank",
+          "testWindowClause"
+        ]
+      },
+      "totals": {
+        "control": {
+          "run": 27,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "gpu": {
+          "run": 27,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        "gpu-strict": {
+          "run": 27,
+          "failures": 22,
+          "errors": 0,
+          "skipped": 0
+        }
+      },
+      "gpu_specific": [],
+      "fails_in_both": [],
+      "fully_on_gpu": 5,
+      "fallback_dependent": [
+        "testCumeDist",
+        "testDenseRank",
+        "testFirstValueOrderDate",
+        "testFirstValueOrderKey",
+        "testLagOrderDate",
+        "testLagOrderKey",
+        "testLagTotalPrice",
+        "testLastValueOrderDate",
+        "testLastValueOrderKey",
+        "testLeadOrderDate",
+        "testLeadOrderKey",
+        "testLeadTotalPrice",
+        "testNthValueOrderDate",
+        "testNthValueOrderKey",
+        "testOverlappingPartitionAndSortingKeys_4",
+        "testPercentRank",
+        "testRank",
+        "testRowNumber",
+        "testRowNumberWithFilter",
+        "testTopNDenseRank",
+        "testTopNRank",
+        "testWindowClause"
+      ],
+      "parity": 1.0,
+      "fallback_operators": {
+        "Window": 18564,
+        "TopNRowNumber": 256,
+        "RowNumber": 193
+      },
+      "allowlisted_operators": {
+        "Exchange": 45504
+      },
+      "tests": {
+        "testDenseRank": {
+          "time": {
+            "control": 7.769,
+            "gpu": 8.87,
+            "gpu-strict": 3.556
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testCumeDist": {
+          "time": {
+            "control": 1.16,
+            "gpu": 1.207,
+            "gpu-strict": 0.237
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testFirstValueOrderDate": {
+          "time": {
+            "control": 11.978,
+            "gpu": 0.701,
+            "gpu-strict": 0.115
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testFirstValueOrderKey": {
+          "time": {
+            "control": 0.896,
+            "gpu": 16.044,
+            "gpu-strict": 0.071
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testLagOrderDate": {
+          "time": {
+            "control": 11.174,
+            "gpu": 14.764,
+            "gpu-strict": 0.095
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testLagOrderKey": {
+          "time": {
+            "control": 1.65,
+            "gpu": 0.235,
+            "gpu-strict": 0.054
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testLastValueOrderDate": {
+          "time": {
+            "control": 13.44,
+            "gpu": 18.289,
+            "gpu-strict": 0.054
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testLagTotalPrice": {
+          "time": {
+            "control": 3.856,
+            "gpu": 1.427,
+            "gpu-strict": 0.063
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testLastValueOrderKey": {
+          "time": {
+            "control": 8.904,
+            "gpu": 16.382,
+            "gpu-strict": 0.06
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testLeadOrderDate": {
+          "time": {
+            "control": 2.939,
+            "gpu": 3.889,
+            "gpu-strict": 1.582
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testLeadOrderKey": {
+          "time": {
+            "control": 9.368,
+            "gpu": 12.846,
+            "gpu-strict": 0.051
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testLeadTotalPrice": {
+          "time": {
+            "control": 7.492,
+            "gpu": 8.878,
+            "gpu-strict": 0.05
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testNthValueOrderDate": {
+          "time": {
+            "control": 5.207,
+            "gpu": 10.859,
+            "gpu-strict": 0.049
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testOverlappingPartitionAndSortingKeys_1": {
+          "time": {
+            "control": 0.43,
+            "gpu": 0.438,
+            "gpu-strict": 0.445
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testOverlappingPartitionAndSortingKeys_2": {
+          "time": {
+            "control": 0.429,
+            "gpu": 0.528,
+            "gpu-strict": 0.617
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testOverlappingPartitionAndSortingKeys_3": {
+          "time": {
+            "control": 0.229,
+            "gpu": 0.419,
+            "gpu-strict": 0.42
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testOverlappingPartitionAndSortingKeys_4": {
+          "time": {
+            "control": 0.165,
+            "gpu": 0.389,
+            "gpu-strict": 0.042
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testNthValueOrderKey": {
+          "time": {
+            "control": 6.177,
+            "gpu": 4.28,
+            "gpu-strict": 0.047
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testPercentRank": {
+          "time": {
+            "control": 1.493,
+            "gpu": 6.189,
+            "gpu-strict": 0.055
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testRank": {
+          "time": {
+            "control": 4.814,
+            "gpu": 2.686,
+            "gpu-strict": 1.673
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testRowNumberWithFilter": {
+          "time": {
+            "control": 0.136,
+            "gpu": 0.2,
+            "gpu-strict": 0.062
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testRowNumberWithFilter_2": {
+          "time": {
+            "control": 0.305,
+            "gpu": 0.377,
+            "gpu-strict": 0.388
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testTopNDenseRank": {
+          "time": {
+            "control": 0.382,
+            "gpu": 0.506,
+            "gpu-strict": 0.047
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testTopNRank": {
+          "time": {
+            "control": 0.363,
+            "gpu": 0.548,
+            "gpu-strict": 0.039
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testRowNumber": {
+          "time": {
+            "control": 0.283,
+            "gpu": 3.224,
+            "gpu-strict": 0.433
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        },
+        "testTopNRowNumber": {
+          "time": {
+            "control": 0.007,
+            "gpu": 0.375,
+            "gpu-strict": 0.611
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "pass"
+        },
+        "testWindowClause": {
+          "time": {
+            "control": 0.896,
+            "gpu": 2.097,
+            "gpu-strict": 1.034
+          },
+          "control": "pass",
+          "gpu": "pass",
+          "gpu-strict": "fail"
+        }
+      }
+    }
+  },
+  "totals": {
+    "run": 243,
+    "pass_control": 243,
+    "pass_gpu": 206,
+    "fully_gpu": 65,
+    "gpu_specific": 37,
+    "both": 0,
+    "fb_dep": 141,
+    "parity": 0.8477366255144033
+  },
+  "started_at": "2026-10-15T09:03:46Z"
+}
